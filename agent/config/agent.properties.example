@@ -1,0 +1,21 @@
+# Argus Agent 生产配置模板（不包含密钥）
+# 建议复制为 deployment/agent.properties，密钥通过 ARGUS_AGENT_AUTH_TOKEN 注入。
+
+server.port=8090
+server.max-http-threads=16
+server.max-request-bytes=65536
+node.id=node-example
+node.name=example-node
+# 控制中心应访问的实际地址；不要填写 0.0.0.0。
+node.advertised-host=127.0.0.1
+auth.token=
+executor.mock=false
+docker.executable=docker
+executor.timeout-seconds=30
+executor.max-concurrent-tasks=4
+# 远程 start/stop/restart 默认关闭；只有完成权限、审计和备份配置后才显式开启。
+control.enabled=false
+instance.id=mc01
+instance.container=mc01
+# true 时自动读取 docker ps -a，展示节点上的全部容器；只读模式下不会执行容器动作。
+instance.discovery=true

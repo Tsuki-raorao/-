@@ -1,0 +1,19 @@
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:argus}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: ${MYSQL_USER:argus}
+    password: ${MYSQL_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+argus:
+  security:
+    # MySQL profile 默认 fail-closed；只有明确关闭才允许本地调试写接口。
+    read-only: ${ARGUS_API_READ_ONLY:true}
+  # 连接真实 MySQL 时不自动插入演示节点、实例和日志。
+  demo-data:
+    enabled: ${ARGUS_DEMO_DATA_ENABLED:false}

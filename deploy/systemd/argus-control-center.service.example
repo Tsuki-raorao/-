@@ -1,0 +1,23 @@
+[Unit]
+Description=Argus Control Center
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=argus
+Group=argus
+WorkingDirectory=/opt/argus/backend
+EnvironmentFile=/etc/argus/argus-control-center.env
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar /opt/argus/backend/argus-control-center.jar
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/argus/backend/data
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target

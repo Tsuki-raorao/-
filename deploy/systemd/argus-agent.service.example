@@ -1,0 +1,23 @@
+[Unit]
+Description=Argus Node Agent
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=argus-agent
+Group=argus-agent
+SupplementaryGroups=docker
+WorkingDirectory=/opt/argus/agent
+EnvironmentFile=/etc/argus/argus-agent.service.env
+ExecStart=/usr/bin/java -cp /opt/argus/agent/classes com.argus.agent.AgentApplication --config=/etc/argus/argus-agent.properties
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/argus-agent
+
+[Install]
+WantedBy=multi-user.target

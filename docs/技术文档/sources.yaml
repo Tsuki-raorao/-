@@ -1,0 +1,148 @@
+# Argus 官方技术资料来源清单
+# 本文件只保存来源和用途，不保存凭据或第三方文档全文。
+# 目录最后审核：2026-09-30；运行时版本字段来自项目配置或服务器观察记录。
+
+- id: java17
+  title: Java SE 17 Documentation
+  url: https://docs.oracle.com/en/java/javase/17/
+  official: true
+  applies_to: [agent, backend]
+  priority: P0
+
+- id: java17-api
+  title: Java SE 17 API
+  url: https://docs.oracle.com/en/java/javase/17/docs/api/
+  official: true
+  applies_to: [agent, backend]
+  priority: P0
+
+- id: spring-boot
+  title: Spring Boot Reference
+  url: https://docs.spring.io/spring-boot/reference/
+  official: true
+  pinned_project_version: 3.3.5
+  applies_to: [backend]
+  priority: P0
+
+- id: spring-jdbc
+  title: Spring JDBC Reference
+  url: https://docs.spring.io/spring-framework/reference/data-access/jdbc.html
+  official: true
+  applies_to: [backend]
+  priority: P0
+
+- id: spring-security
+  title: Spring Security Reference
+  url: https://docs.spring.io/spring-security/reference/
+  official: true
+  applies_to: [backend, agent]
+  priority: P1
+
+- id: spring-websocket
+  title: Spring WebSocket Reference
+  url: https://docs.spring.io/spring-framework/reference/web/websocket.html
+  official: true
+  applies_to: [backend, frontend]
+  priority: P1
+
+- id: spring-data-redis
+  title: Spring Data Redis Reference
+  url: https://docs.spring.io/spring-data/redis/reference/
+  official: true
+  applies_to: [backend]
+  priority: P1
+
+- id: spring-amqp
+  title: Spring AMQP Reference
+  url: https://docs.spring.io/spring-amqp/reference/
+  official: true
+  applies_to: [backend]
+  priority: P1
+
+- id: mysql80
+  title: MySQL 8.0 Reference Manual
+  url: https://dev.mysql.com/doc/refman/8.0/en/
+  official: true
+  pinned_runtime_version: 8.0.27
+  applies_to: [backend, operations]
+  priority: P0
+
+- id: flyway
+  title: Flyway Documentation
+  url: https://documentation.red-gate.com/flyway
+  official: true
+  pinned_project_version: 10.20.1
+  applies_to: [backend, operations]
+  priority: P0
+
+- id: redis
+  title: Redis Documentation
+  url: https://redis.io/docs/latest/
+  official: true
+  applies_to: [backend, operations]
+  priority: P1
+
+- id: rabbitmq
+  title: RabbitMQ Documentation
+  url: https://www.rabbitmq.com/docs
+  official: true
+  applies_to: [backend, operations]
+  priority: P1
+
+- id: docker-engine
+  title: Docker Engine Documentation
+  url: https://docs.docker.com/engine/
+  official: true
+  observed_environment_version: 29.x
+  applies_to: [agent, operations]
+  priority: P0
+
+- id: prometheus
+  title: Prometheus Documentation
+  url: https://prometheus.io/docs/
+  official: true
+  applies_to: [operations, backend]
+  priority: P1
+
+- id: grafana
+  title: Grafana Documentation
+  url: https://grafana.com/docs/grafana/latest/
+  official: true
+  applies_to: [operations]
+  priority: P1
+
+- id: loki
+  title: Grafana Loki Documentation
+  url: https://grafana.com/docs/loki/latest/
+  official: true
+  applies_to: [operations, agent]
+  priority: P1
+
+- id: neoforge
+  title: NeoForge Documentation
+  url: https://docs.neoforged.net/
+  official: true
+  target_server_version: 1.21.1
+  applies_to: [agent, minecraft-adapter]
+  priority: P1
+
+- id: langchain4j
+  title: LangChain4j Documentation
+  url: https://docs.langchain4j.dev/
+  official: true
+  applies_to: [ai]
+  priority: P3
+
+- id: spring-ai
+  title: Spring AI Reference
+  url: https://docs.spring.io/spring-ai/reference/
+  official: true
+  applies_to: [ai, backend]
+  priority: P3
+
+- id: opentelemetry
+  title: OpenTelemetry Documentation
+  url: https://opentelemetry.io/docs/
+  official: true
+  applies_to: [backend, agent, operations]
+  priority: P2

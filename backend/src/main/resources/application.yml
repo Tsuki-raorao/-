@@ -1,0 +1,39 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: argus-control-center
+  datasource:
+    url: jdbc:h2:file:./data/argus;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+argus:
+  security:
+    # 生产先保持只读，完成登录/权限/审计后再关闭；本地默认 false。
+    read-only: ${ARGUS_API_READ_ONLY:false}
+    # 域名解封前建议开启；令牌只通过环境变量注入，健康检查仍保持可探活。
+    api-auth-required: ${ARGUS_API_AUTH_REQUIRED:false}
+    api-access-token: ${ARGUS_API_ACCESS_TOKEN:}
+  # 本地演示默认开启；生产/MySQL 配置会覆盖为关闭。
+  demo-data:
+    enabled: true
+  web:
+    cors:
+      # 多个来源用英文逗号分隔，例如 https://ops.example.com,http://localhost:5173
+      allowed-origins: ${ARGUS_CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+  # 控制中心到 Agent 的安全读取通道。默认关闭，开启前必须填写主机白名单。
+  agent:
+    enabled: ${ARGUS_AGENT_GATEWAY_ENABLED:false}
+    read-only: ${ARGUS_AGENT_GATEWAY_READ_ONLY:true}
+    allow-control: ${ARGUS_AGENT_GATEWAY_ALLOW_CONTROL:false}
+    require-allowlist: ${ARGUS_AGENT_GATEWAY_REQUIRE_ALLOWLIST:true}
+    allowed-hosts: ${ARGUS_AGENT_GATEWAY_ALLOWED_HOSTS:}
+    auth-token: ${ARGUS_AGENT_AUTH_TOKEN:}
+    connect-timeout: ${ARGUS_AGENT_GATEWAY_CONNECT_TIMEOUT:3s}
+    read-timeout: ${ARGUS_AGENT_GATEWAY_READ_TIMEOUT:5s}
+    sync-initial-delay-ms: ${ARGUS_AGENT_SYNC_INITIAL_DELAY_MS:5000}
+    sync-interval-ms: ${ARGUS_AGENT_SYNC_INTERVAL_MS:60000}
