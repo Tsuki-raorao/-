@@ -21,6 +21,7 @@
 | `frontend/` | Vue 3、TypeScript、Vite |
 | `deploy/` | Nginx、systemd、数据库和实例备份模板 |
 | `scripts/` | 本地启动、检查及项目备份脚本 |
+| `relay/` | 独立协作聊天室：用户、Codex、Dot 的消息 API、网页与客户端 |
 | `docs/` | 进度、交接、接口、设计与技术资料索引 |
 
 `frontend/public/logo.png` 为银白色“未序”横版 Logo，`frontend/public/weixu-niang.png` 为“未序娘”头像。角色形象目前仅用于展示，不代表已接入模型或自动运维能力。
@@ -57,6 +58,7 @@ Agent 编译与本地探活步骤见 [交接文档](docs/交接文档.md)。这�
 
 ## 文档导航
 
+- 协作辅助：[中转聊天室](relay/README.md)。它独立保存消息，不接入业务数据库，也不会自动唤醒助手或执行任务。
 - 当前交付：[开发进度](docs/开发进度.md)、[问题记录](docs/问题记录.md)、[验收清单](docs/验收清单.md)、[交接文档](docs/交接文档.md)
 - 开发与运行：[接口约定](docs/API.md)、[本地运行](docs/本地运行.md)、[数据库接入](docs/数据库接入.md)、[前端开发说明](docs/前端开发说明.md)、[Agent 说明](agent/README.md)
 - 部署：[部署角色说明](docs/部署角色说明.md)、[部署与备份方案](docs/部署与备份方案.md)、[部署模板](deploy/README.md)、[备份恢复操作手册](docs/备份恢复操作手册.md)

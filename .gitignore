@@ -9,6 +9,7 @@
 !/docs/
 !/deploy/
 !/scripts/
+!/relay/
 
 # Private handoffs, infrastructure records, local snapshots and credentials.
 /local-private/
@@ -67,4 +68,5 @@ __pycache__/
 *.rar
 /backend/data/
 /data/
+/relay/data/
 *browser-profile*/

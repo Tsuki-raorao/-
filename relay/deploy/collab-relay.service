@@ -1,0 +1,29 @@
+[Unit]
+Description=Private collaboration message relay
+After=network.target
+
+[Service]
+Type=simple
+User=collab-relay
+Group=collab-relay
+WorkingDirectory=/opt/collab-relay/current
+EnvironmentFile=/etc/collab-relay.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /opt/collab-relay/current/relay_server.py
+Restart=on-failure
+RestartSec=3
+UMask=0077
+StateDirectory=collab-relay
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/collab-relay
+RestrictAddressFamilies=AF_INET AF_UNIX
+MemoryMax=128M
+TasksMax=40
+LimitNOFILE=128
+
+[Install]
+WantedBy=multi-user.target

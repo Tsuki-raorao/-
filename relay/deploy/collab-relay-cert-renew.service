@@ -1,0 +1,8 @@
+[Unit]
+Description=Renew collaboration relay HTTPS certificate
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/collab-relay-acme/venv/bin/certbot renew --cert-name collab-relay-ip --quiet --deploy-hook "/usr/sbin/nginx -t && /usr/bin/systemctl reload nginx"

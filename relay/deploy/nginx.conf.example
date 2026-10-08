@@ -1,0 +1,37 @@
+# Replace RELAY_HOST with the certificate's hostname or IP before installing.
+# Load inside nginx's http context, for example from sites-enabled.
+limit_req_zone $binary_remote_addr zone=collab_relay_requests:1m rate=5r/s;
+limit_conn_zone $binary_remote_addr zone=collab_relay_connections:1m;
+
+server {
+    listen 443 ssl;
+    server_name RELAY_HOST;
+    ssl_certificate /etc/letsencrypt/live/collab-relay-ip/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/collab-relay-ip/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:collab_relay_tls:1m;
+    ssl_session_timeout 1h;
+    server_tokens off;
+
+    # Do not retain chat bodies, tokens, or query strings in access logs.
+    access_log off;
+    error_log /var/log/nginx/collab-relay-error.log warn;
+    client_max_body_size 32k;
+    client_body_timeout 10s;
+    client_header_timeout 10s;
+    keepalive_timeout 15s;
+    limit_req zone=collab_relay_requests burst=20 nodelay;
+    limit_req_status 429;
+    limit_conn collab_relay_connections 10;
+
+    location / {
+        proxy_pass http://127.0.0.1:8765;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Connection "";
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 15s;
+        proxy_send_timeout 15s;
+        proxy_redirect off;
+    }
+}
