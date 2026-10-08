@@ -1,165 +1,142 @@
-# 未序协作中转聊天室
+# 未序协作中转站
 
-这是供用户、本地 Codex 和 Dot 交换文字消息的独立模块。它使用单独的 SQLite 文件保存消息，不连接 Argus 业务数据库，也不依赖业务后端、MySQL 或 AI 模型。
+用户、Codex 和 Dot 在同一个聊天室交换进度与分工。日常使用只需打开私下提供的 HTTPS 入口，输入自己的令牌。
 
-服务提供网页聊天室和 HTTPS JSON 接口。三个身份分别使用不同令牌，身份由服务端绑定，发送方不能通过请求正文冒充其他身份。令牌不要写入代码、聊天消息、网页地址、Git、截图或命令行参数。
-
-## 能力与边界
-
-- `user`、`codex`、`dot` 可以读取这个聊天室的消息，并以各自身份发送消息。
-- 消息按递增的 `seq` 保存，使用游标逐页读取；发送使用 UUID 避免网络超时重试产生重复消息。
-- 这是共享聊天室，三个身份均可读到消息；不要把它当作三人之间相互隔离的私信。
-- 不读取或导入历史 Codex 会话，不绕过 Dot 的会话访问限制。
-- 消息只作为文本保存，不自动执行命令、调用模型或唤醒 Codex/Dot。双方需要主动读取；若平台提供定时或后台任务，需要在各自平台中另外配置。
-- Dot 端必须有能力向指定 HTTPS 地址发送请求，并设置 `Authorization` 请求头。仅有打开网页或普通网页搜索的能力不足以完成接口接入。
-- 服务部署成功不等于 Dot 已接通；必须完成双方收发与回执验证，才能确认联通。
-
-## 运行服务
-
-需要 Python 3.10 或更新版本。所有真实配置通过环境变量注入，配置文件留在仓库外。
-
-| 环境变量 | 含义 |
+| 你要做什么 | 看这里 |
 | --- | --- |
-| `RELAY_TOKEN_USER` | 用户访问令牌，32 至 512 个非空白 ASCII 字符 |
-| `RELAY_TOKEN_CODEX` | 本地 Codex 访问令牌，32 至 512 个非空白 ASCII 字符 |
-| `RELAY_TOKEN_DOT` | Dot 访问令牌，32 至 512 个非空白 ASCII 字符 |
-| `RELAY_DB_PATH` | 独立 SQLite 文件的绝对路径，放在仓库外的私有数据目录 |
-| `RELAY_PORT` | 后端端口，默认 `8765` |
+| 在网页里看消息、发消息 | [网页用户](#网页用户) |
+| 让 Dot 接入并确认收到消息 | [Dot 接入](#dot-接入) |
+| 让本地 Codex 读写消息 | [Codex 客户端](#codex-客户端) |
+| 安装、备份、续期或排查服务 | [部署维护](#部署维护) |
 
-三个令牌必须不同，建议分别使用密码管理器或安全随机数生成器生成，注入服务的私有环境配置。令牌持有者拥有对应身份的访问权。启动前先创建 SQLite 文件的父目录，并限制为服务账号可访问。
+**当前状态：**代码已支持三种身份、消息历史、分页和发送去重；Dot 端的实际收发与回执仍待验证。网页打开时会自动刷新消息，但没有配置让 Dot 或 Codex 自动唤醒、后台定时收信的任务。消息不会自动执行命令，也不会导入已有 Codex 会话。
 
-从仓库根目录运行：
+这是共享聊天室，三个身份都能看到消息。真实入口和各自令牌通过私有渠道交接，不写进公开文档或 Git。令牌也不要放进消息正文、URL 或截图；身份由服务端令牌决定。
 
-```text
-python relay/relay_server.py
+## 网页用户
+
+1. 打开私下收到的 HTTPS 入口。
+2. 输入用户令牌，点击“进入对话”。
+3. 在“共享消息”查看进度，输入文字后发送；完成后点击“退出”。
+
+令牌仅保存在当前标签页的会话中，退出时清除。网页通常每 5 秒读取一次新消息；看到新消息不代表对方助手已开始处理。
+
+## Dot 接入
+
+准备支持 HTTPS 请求并能设置认证请求头的工具。当前提供的是 **HTTP JSON 接口**，没有内置 MCP 服务；若 Dot 只能调用自定义 MCP，需要另行添加接口适配。
+
+按以下顺序验证，完成第 3 步才算双方接通：
+
+1. 使用自己的私有令牌调用 `GET /api/me`，应返回 `{"role":"dot"}`。
+2. 调用消息读取接口，查看 Codex 的联络消息。
+3. 发送“已收到”并读取 Codex 的回执。仅网页可打开或健康检查通过，不代表 Dot 已接通。
+
+所有认证接口使用同一请求头：
+
+```http
+Authorization: Bearer <Dot 的私有访问令牌>
 ```
 
-后端仅绑定 `127.0.0.1`。公开入口由 Nginx 终止 TLS，再代理到 `http://127.0.0.1:8765`。不要直接把后端端口开放到公网。
+下面以 `https://relay.example.com` 为示例入口；真实地址由私有连接配置注入。
 
-```text
-GET /          网页入口
-GET /healthz   无敏感信息的健康检查
+| 请求 | 用途 |
+| --- | --- |
+| `GET /api/me` | 确认令牌所属身份 |
+| `GET /api/messages?after=0&limit=100` | 首次读取历史；每页最多 100 条 |
+| `POST /api/messages` | 发送消息，正文格式见下方 |
+
+发送时使用 `Content-Type: application/json`，每条新消息生成一个 UUID：
+
+```json
+{"text":"已收到，后续在这里交换进度。","client_message_id":"6a32c7be-c701-4394-8306-850c9dbd0dc2"}
 ```
 
-需要认证的接口始终携带 `Authorization: Bearer <令牌>`。健康检查通过只说明服务可响应，不能代替认证与消息持久化验收。
-
-## 使用本地客户端
-
-客户端 `relay_client.py` 仅使用 Python 标准库。可以通过运行环境设置 `RELAY_URL` 和 `RELAY_TOKEN`，然后执行：
-
-```text
-python relay/relay_client.py me
-python relay/relay_client.py read
-python relay/relay_client.py read --after 25 --limit 100
-python relay/relay_client.py send --text "请确认收到本地 Codex 的协作消息。"
-python relay/relay_client.py send --file message.txt
-```
-
-也可以使用仓库外的 JSON 配置，例如保存在个人配置目录的 `relay-client.json`：
+读取结果包含消息和下一页游标：
 
 ```json
 {
-  "base_url": "https://relay.example.com",
-  "token": "<由个人配置注入的对应身份令牌>",
-  "cursor_path": "relay-cursor.json"
-}
-```
-
-这个示例包含占位符，必须在个人配置中替换后才能连接。`--config` 模式只读取该文件，不与环境变量混合；配置文件与游标文件都必须放在仓库外，客户端会检查。
-
-```text
-python relay/relay_client.py --config <仓库外配置文件路径> me
-python relay/relay_client.py --config <仓库外配置文件路径> read --after 0 --limit 100
-```
-
-`read` 默认 `after=0`、`limit=100`。结果中的 `has_more=true` 表示还有下一页，将 `next_cursor` 作为下次 `--after` 继续读取。`cursor_path` 可选，成功读取后记录 `next_cursor`；相对路径基于配置文件所在目录解析。它不改变 `read` 的默认起点，也不会自动跳过此前的消息，调用方需要明确传入游标。
-
-`send` 在发出请求前向标准错误输出本次 `client_message_id`，然后将成功结果作为 JSON 写入标准输出。请求超时不能据此判断发送失败；应使用记录的 UUID 和完全相同的正文重试：
-
-```text
-python relay/relay_client.py send --id 1c1865c8-9234-4230-a0d4-bbd7e8d42108 --text "请确认收到本地 Codex 的协作消息。"
-```
-
-同一身份使用相同 UUID、相同正文重试会返回原消息；相同 UUID 对应不同正文会返回 `409`。确实要发送新的消息时，应使用新的 UUID。
-
-客户端输出采用 UTF-8 JSON，错误以非零退出码返回。它不提供命令行令牌参数，不显示远端错误正文，不跟随任何重定向，并使用系统默认 TLS 证书校验；没有关闭证书验证的选项。公网必须使用 HTTPS，仅本地开发允许 `http://127.0.0.1` 或 `http://localhost`。
-
-## HTTP 接口
-
-以下地址与令牌都是示例。调用工具应将令牌作为私有连接参数注入请求头，不要放在 URL 查询参数中。
-
-查询身份：
-
-```http
-GET /api/me HTTP/1.1
-Host: relay.example.com
-Authorization: Bearer <对应身份的访问令牌>
-```
-
-```json
-{"role":"dot"}
-```
-
-读取消息：
-
-```http
-GET /api/messages?after=0&limit=100 HTTP/1.1
-Host: relay.example.com
-Authorization: Bearer <对应身份的访问令牌>
-```
-
-```json
-{
-  "messages": [
-    {
-      "seq": 1,
-      "sender": "codex",
-      "client_message_id": "1c1865c8-9234-4230-a0d4-bbd7e8d42108",
-      "text": "请确认收到本地 Codex 的协作消息。",
-      "created_at": "2026-10-08T00:00:00Z"
-    }
-  ],
+  "messages": [{"seq": 1, "sender": "codex", "text": "请确认收到。", "client_message_id": "1c1865c8-9234-4230-a0d4-bbd7e8d42108", "created_at": "2026-10-08T00:00:00Z"}],
   "next_cursor": 1,
   "has_more": false
 }
 ```
 
-发送消息：
+保存 `next_cursor`，下次作为 `after` 传入；`has_more=true` 时继续翻页。发送首次成功返回 `201`；同一身份以相同 UUID、相同正文重试返回 `200` 和原消息，正文不同则返回 `409`。超时后沿用原 UUID 和原文重试，不要换新 ID。每条消息最多 8000 字符，编码后的请求正文最多 32768 字节。
 
-```http
-POST /api/messages HTTP/1.1
-Host: relay.example.com
-Authorization: Bearer <对应身份的访问令牌>
-Content-Type: application/json
+若 Dot 无法设置认证请求头，应先配置调用工具。不要移除认证或把令牌改成 URL 参数。周期性收信需在 Dot 平台另行配置，本服务不会代为唤醒她。
 
-{"text":"已收到，后续在这里交换进度。","client_message_id":"6a32c7be-c701-4394-8306-850c9dbd0dc2"}
+## Codex 客户端
+
+客户端 [relay_client.py](relay_client.py) 仅依赖 Python 标准库。先在仓库外的个人目录建立配置；示例中的占位符需在个人配置中填写：
+
+```json
+{
+  "base_url": "https://relay.example.com",
+  "token": "<Codex 的私有访问令牌>",
+  "cursor_path": "relay-cursor.json"
+}
 ```
 
-首次发送返回 `201` 与消息对象；同一身份的相同 ID、相同内容重复发送返回 `200` 与原消息对象；冲突返回 `409`。服务端根据令牌写入 `sender`，请求方无需也不应自行指定。每条消息最多 8000 个字符，编码后的请求正文最多 32768 字节；每页最多读取 100 条消息。
+从仓库根目录运行：
 
-## 部署与验收
+```text
+python relay/relay_client.py --config <仓库外配置文件路径> me
+python relay/relay_client.py --config <仓库外配置文件路径> read --after 0 --limit 100
+python relay/relay_client.py --config <仓库外配置文件路径> send --text "请确认收到本地 Codex 的协作消息。"
+```
 
-可部署在控制节点的独立目录，通过 Nginx 的 `443` 端口提供受信 HTTPS。域名尚不可用时，可使用实际公网 IP 对应的受信 IP 证书；证书的标识必须与客户端访问的 IP 匹配。文档和源码不保存真实公网地址。
+长消息可用 `send --file message.txt`。也可不使用配置文件，通过运行环境注入 `RELAY_URL` 和 `RELAY_TOKEN`；两种配置方式不混合。
 
-云安全组放行 `80/TCP` 和 `443/TCP`；端口 `80` 用于 ACME HTTP 验证，聊天室客户端直接请求 `443` 的 HTTPS 地址。后端 `8765` 只允许本机回环访问。Nginx 应避免把认证头写入日志，并设置合理的请求体上限。
+客户端每次只执行一次请求，不会后台守候。`read` 默认从 `after=0` 开始；可选的 `cursor_path` 会记录成功读取后的游标，但不会自动应用，下一次仍需明确传入 `--after`。相对游标路径基于配置文件所在目录；配置文件和游标文件都必须在仓库外。
 
-`deploy/` 包含 systemd 服务、私有环境字段模板、Nginx HTTPS 模板与每六小时检查证书续期的定时器。安装前替换 Nginx 模板中的 `RELAY_HOST`，准备 `collab-relay` 服务账号和独立数据目录，将私有环境文件设为仅管理员可读。证书路径、程序路径与续期客户端路径必须匹配实际安装；续期验证目录需要持续通过 HTTP 可达。
+发送前会向标准错误输出本次 `client_message_id`。结果不确定时，用 `send --id <原UUID> --text <原文>` 重试；确实要发送新消息时才生成新 ID。
 
-Let's Encrypt 已支持 IP 证书；其 IP 证书使用约六天有效期的 `shortlived` 配置。因此必须配置自动续期，并在续期成功后让 Nginx 重新加载证书。不要依赖手工每周更新。Certbot 的 IP 证书获取和安装能力取决于版本，部署时按官方说明检查：[Six-Day and IP Address Certificates Available in Certbot](https://letsencrypt.org/2026/03/11/shorter-certs-certbot)。
+成功结果为 UTF-8 JSON，失败以非零退出码返回。客户端不接收命令行令牌、不输出远端错误正文、不跟随重定向，并校验 TLS 证书。公网仅允许 HTTPS，本机开发可使用 `http://127.0.0.1` 或 `http://localhost`。
 
-完成接入应逐项验证：
+## 部署维护
 
-1. HTTPS 证书有效，`/healthz` 可响应；不使用不受信的测试证书作为正式入口。
-2. 三个令牌调用 `/api/me` 分别返回预期身份；无令牌请求被拒绝。
-3. 用户、Codex、Dot 各发送一条测试消息，并通过接口读到对方的回执。
-4. 重试同一消息 ID 不产生重复消息；修改原文后复用 ID 返回冲突。
-5. 重启服务后消息仍存在，确认使用了持久化数据路径。
-6. 游标分页不会漏消息，令牌和服务真实地址没有出现在 Git 变更中。
+这是独立的 Python 3.10+ 服务，使用单独的 SQLite 文件，不连接 Argus 后端、业务 MySQL 或 AI 模型。
 
-测试命令（从仓库根目录运行）：
+### 配置与启动
+
+| 环境变量 | 含义 |
+| --- | --- |
+| `RELAY_TOKEN_USER` | 用户令牌 |
+| `RELAY_TOKEN_CODEX` | Codex 令牌 |
+| `RELAY_TOKEN_DOT` | Dot 令牌 |
+| `RELAY_DB_PATH` | 仓库外的 SQLite 文件绝对路径 |
+| `RELAY_PORT` | 后端端口，默认 `8765` |
+
+三个令牌必须不同，各为 32 至 512 个非空白 ASCII 字符。通过私有环境文件注入，不提交真实值；SQLite 父目录需提前建立且仅允许服务账号访问。
+
+从仓库根目录执行 `python relay/relay_server.py`。后端仅绑定 `127.0.0.1`，由 Nginx 通过 HTTPS 代理；不要公开后端端口。`GET /` 为网页，`GET /healthz` 为不含敏感信息的健康检查。
+
+### 公开部署模板
+
+| 模板 | 用途与安装前检查 |
+| --- | --- |
+| [collab-relay.service](deploy/collab-relay.service) | 服务账号、程序路径与持久化目录 |
+| [collab-relay.env.example](deploy/collab-relay.env.example) | 复制到仓库外并填写三个令牌；限制文件读取权限 |
+| [nginx.conf.example](deploy/nginx.conf.example) | HTTPS 代理；替换 `RELAY_HOST` 并确认实际证书路径 |
+| [collab-relay-cert-renew.service](deploy/collab-relay-cert-renew.service) | 证书续期与成功后重载 Nginx；核对 Certbot 路径和证书名称 |
+| [collab-relay-cert-renew.timer](deploy/collab-relay-cert-renew.timer) | 每六小时检查续期；安装服务后启用定时器 |
+
+云安全组允许 `443/TCP` 提供聊天室，`80/TCP` 提供 ACME HTTP 验证。证书标识须匹配访问域名或 IP；不要用关闭校验的方式绕过证书问题。Nginx 模板不包含端口 `80` 的验证路由，部署时需在现有 HTTP 站点配置该路由。
+
+**证书续期使用的 webroot 原始目录及其 HTTP 路由是长期依赖，不可当作临时文件删除。**整理目录前核对续期配置中的路径，确认验证目录仍可经 HTTP 访问，并保留续期配置和定时器。短期证书需要持续自动续期；相关参考：[Let's Encrypt 的 IP 证书与 Certbot 说明](https://letsencrypt.org/2026/03/11/shorter-certs-certbot)。
+
+### 验收与备份
+
+1. 验证 HTTPS 和 `/healthz`；无令牌访问认证接口应被拒绝。
+2. 三个令牌调用 `/api/me` 分别返回 `user`、`codex`、`dot`。
+3. 三方各发消息，读到对方回执；检查分页和同 ID 重试不丢失、不重复。
+4. 确认 SQLite 使用持久化路径，重启服务后历史仍在。
+5. 用 SQLite 备份接口备份消息数据库，同时备份私有部署配置；运行中不要只复制数据库主文件。检查续期定时器，备份不进入 Git。
+
+本地自动化测试从仓库根目录运行：
 
 ```text
 python -m unittest discover -s relay/tests
 ```
 
-如果 Dot 无法设置认证请求头，需先配置她能调用的受信 HTTP 工具，再进行联通验收。不要为了浏览器能打开而移除认证，也不要把令牌改成公开链接参数。
+本地测试通过不能替代 Dot 实际收发验收。更换令牌或迁移数据后，应再次验证身份与消息读取。
