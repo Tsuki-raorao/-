@@ -47,6 +47,8 @@ export interface Task {
   action: string; status: TaskStatus; executionMode: ExecutionMode; requestedBy: string
   message: string; createdAt: string | null; updatedAt: string | null; finishedAt: string | null
   attempts: number | null; resultCode: string | null
+  blocksInstance: boolean | null
+  reviewSummary: { id: string; status: string; resultCode: string | null; appliedAt: string | null } | null
 }
 export interface TaskEvent { id: string; taskId: string; sequence: number; fromStatus: TaskStatus | null; toStatus: TaskStatus; actor: string; reason: string; occurredAt: string | null }
 export interface HealthState { status: string; readOnly: boolean; databaseReady?: boolean }
@@ -104,10 +106,14 @@ export function normalizeInstance(input: unknown): Instance {
 
 export function normalizeTask(input: unknown): Task {
   const x = asRecord(input)
+  const review = asRecord(x.reviewSummary)
   return { id: text(x.id), instanceId: text(x.instanceId), nodeId: text(x.nodeId), agentInstanceId: text(x.agentInstanceId), commandId: text(x.commandId),
     action: text(x.action, 'UNKNOWN'), status: taskStatus(x.status), executionMode: member(x.executionMode, ['MOCK', 'DOCKER', 'LEGACY_MOCK', 'UNKNOWN'], 'UNKNOWN'),
     requestedBy: text(x.requestedBy, '未记录'), message: text(x.message), createdAt: timestamp(x.createdAt), updatedAt: timestamp(x.updatedAt), finishedAt: timestamp(x.finishedAt),
-    attempts: Number.isInteger(x.attempts) ? measurement(x.attempts) : null, resultCode: text(x.resultCode) || null }
+    attempts: Number.isInteger(x.attempts) ? measurement(x.attempts) : null, resultCode: text(x.resultCode) || null,
+    blocksInstance: typeof x.blocksInstance === 'boolean' ? x.blocksInstance : null,
+    reviewSummary: text(review.id) && ['PENDING', 'PROCESSING', 'RETRY_WAIT', 'BLOCKED', 'APPLIED'].includes(String(review.status))
+      ? { id: text(review.id), status: text(review.status), resultCode: text(review.resultCode) || null, appliedAt: timestamp(review.appliedAt) } : null }
 }
 
 export const taskStatus = (value: unknown): TaskStatus => member(value, ['PENDING', 'DISPATCHING', 'DELIVERED', 'RUNNING', 'RETRY_WAIT', 'SUCCEEDED', 'FAILED', 'UNKNOWN'], 'UNKNOWN')
@@ -131,6 +137,7 @@ export function taskMessageLabel(value: string): string {
 export const actionLabel = (value: string): string => ({ START: '启动', STOP: '停止', RESTART: '重启' })[value] || value
 export const taskTerminal = (task: Task): boolean => task.executionMode !== 'UNKNOWN' && (task.status === 'SUCCEEDED' || task.status === 'FAILED')
 export function taskResultLabel(task: Task): string {
+  if (task.status === 'UNKNOWN' && task.reviewSummary?.status === 'APPLIED') return '原结果不确定 · 已人工核对'
   if (task.status !== 'SUCCEEDED') return taskStatusLabel(task.status)
   return task.executionMode === 'MOCK' ? '模拟成功 · 未操作 Docker' : task.executionMode === 'LEGACY_MOCK' ? '旧模拟记录完成' : task.executionMode === 'DOCKER' ? 'Agent 报告执行成功' : '结果未验证 · 来源未知'
 }

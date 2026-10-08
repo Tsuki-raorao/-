@@ -112,7 +112,7 @@ public class AgentCommandGateway {
     private static String text(JsonNode body,String field) {
         return body.path(field).isTextual()?body.path(field).textValue():"";
     }
-    private Response exchange(String address,String path,String payload,boolean control) {
+    Response exchange(String address,String path,String payload,boolean control) {
         if(!gateway.isEnabled() || !gateway.isReadOnly() || !gateway.isRequireAllowlist())
             throw new TaskControlException(503,"AGENT_GATEWAY_DISABLED");
         URI uri=URI.create(normalizeAddress(address)+path);

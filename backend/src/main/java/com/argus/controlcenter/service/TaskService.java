@@ -15,19 +15,24 @@ public class TaskService {
     private final TaskQueueStore store;
     private final TaskControlPolicy policy;
     private final AgentCommandGateway gateway;
-    public TaskService(TaskRepository repository,InstanceService instances,NodeRepository nodes,TaskQueueStore store,TaskControlPolicy policy,AgentCommandGateway gateway) {
-        this.repository=repository;this.instances=instances;this.nodes=nodes;this.store=store;this.policy=policy;this.gateway=gateway;
+    private final TaskResolutionRepository resolutions;
+    public TaskService(TaskRepository repository,InstanceService instances,NodeRepository nodes,TaskQueueStore store,TaskControlPolicy policy,AgentCommandGateway gateway,TaskResolutionRepository resolutions) {
+        this.repository=repository;this.instances=instances;this.nodes=nodes;this.store=store;this.policy=policy;this.gateway=gateway;this.resolutions=resolutions;
     }
-    public List<Task> findAll() { return repository.findAll(); }
-    public Task findById(String id) { return repository.findById(id).orElseThrow(()->new NotFoundException("task not found")); }
+    public List<Task> findAll() { return resolutions.decorate(repository.findAll()); }
+    public Task findById(String id) { return decorate(repository.findById(id).orElseThrow(()->new NotFoundException("task not found"))); }
+    private Task decorate(Task task){return resolutions.decorate(List.of(task)).get(0);}
     public List<TaskEvent> events(String id) { findById(id);return repository.events(id); }
     public ControlCapabilities capabilities(boolean operator) {
         boolean enabled=policy.enabled();
+        Map<String,String> locks=resolutions.blockingTasks();
         List<ControlCapabilities.Target> targets=instances.findAll().stream()
                 .filter(instance->Set.of("MOCK","DOCKER").contains(instance.getDataSource()))
                 .map(instance->new ControlCapabilities.Target(instance.getId(),instance.getDataSource(),
-                        operator&&policy.targetAllowed(instance.getId(),instance.getDataSource())?TaskControlPolicy.ACTIONS:List.<String>of())).toList();
-        boolean can=operator&&enabled&&targets.stream().anyMatch(value->!value.allowedActions().isEmpty());
+                        operator&&!locks.containsKey(instance.getId())&&policy.targetAllowed(instance.getId(),instance.getDataSource())?TaskControlPolicy.ACTIONS:List.<String>of(),
+                        locks.get(instance.getId()),locks.containsKey(instance.getId())?"INSTANCE_HAS_UNRESOLVED_TASK":null,
+                        operator&&policy.targetAllowed(instance.getId(),instance.getDataSource()))).toList();
+        boolean can=operator&&enabled&&targets.stream().anyMatch(ControlCapabilities.Target::canConfirmPending);
         return new ControlCapabilities(enabled,can,can?TaskControlPolicy.ACTIONS:List.of(),targets,
                 !enabled?"CONTROL_DISABLED":!operator?"OPERATOR_REQUIRED":!can?"NO_ALLOWED_TARGETS":"READY");
     }
@@ -40,7 +45,7 @@ public class TaskService {
             if(key==null || !UUID.fromString(key).toString().equals(key)) throw new IllegalArgumentException();
         } catch(IllegalArgumentException e) { throw new IllegalArgumentException("Idempotency-Key must be a canonical UUID"); }
         Optional<TaskCommand> prior=repository.findByKey(key);
-        if(prior.isPresent()) return TaskQueueStore.same(prior.get(),instanceId,action,mode);
+        if(prior.isPresent()) return decorate(TaskQueueStore.same(prior.get(),instanceId,action,mode));
         if(!policy.enabled()) throw new TaskControlException(403,"CONTROL_DISABLED");
         policy.requireTarget(instanceId,mode);
         Instance instance=instances.findById(instanceId);
@@ -50,6 +55,6 @@ public class TaskService {
         AgentCommandGateway.Health health=gateway.health(address);
         if(!health.executionMode().equals(mode)) throw new TaskControlException(409,"EXECUTION_MODE_CHANGED");
         if(!health.controlEnabled()) throw new TaskControlException(403,"AGENT_CONTROL_DISABLED");
-        return store.enqueue(instance,address,action,mode,key,health);
+        return decorate(store.enqueue(instance,address,action,mode,key,health));
     }
 }

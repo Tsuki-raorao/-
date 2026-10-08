@@ -12,7 +12,7 @@ const rawTask = { id: 'task-a', ...intent, executionMode: 'MOCK', commandId: 'co
 const task = models.normalizeTask(rawTask)
 const defer = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 const storage = () => { const map = new Map(); return { getItem: key => map.get(key) || null, setItem: (key, value) => map.set(key, value), removeItem: key => map.delete(key) } }
-const capabilities = { controlEnabled: true, canControl: true, allowedActions: ['START', 'RESTART'], targets: [{ instanceId: 'central-a', executionMode: 'MOCK', allowedActions: ['RESTART'] }] }
+const capabilities = { controlEnabled: true, canControl: true, allowedActions: ['START', 'RESTART'], targets: [{ instanceId: 'central-a', executionMode: 'MOCK', blockingTaskId: null, blockedReason: null, allowedActions: ['RESTART'] }] }
 
 test('任务状态完整保留，未知值不折算排队或成功，执行来源分开', () => {
   for (const status of ['PENDING', 'DISPATCHING', 'DELIVERED', 'RUNNING', 'RETRY_WAIT', 'SUCCEEDED', 'FAILED', 'UNKNOWN']) assert.equal(models.normalizeTask({ ...rawTask, status }).status, status)
@@ -36,6 +36,10 @@ test('能力接口严格验证开关、权限、目标 ID、模式与动作交�
     assert.equal(control.allowedTarget(control.normalizeCapabilities(value), 'central-a', 'RESTART'), undefined)
   }
   assert.equal(control.normalizeCapabilities({ ...capabilities, targets: [{ ...capabilities.targets[0], executionMode: 'UNKNOWN' }] }).targets.length, 0)
+  const readonly = control.normalizeCapabilities({ ...capabilities, controlEnabled: false, canControl: false, targets: [{ ...capabilities.targets[0], blockingTaskId: 'old-outside-list', blockedReason: 'INSTANCE_HAS_UNRESOLVED_TASK', canConfirmPending: true }] })
+  assert.equal(readonly.targets[0].blockingTaskId, 'old-outside-list')
+  assert.equal(readonly.targets[0].canConfirmPending, false)
+  assert.equal(control.allowedTarget(readonly, 'central-a', 'RESTART'), undefined)
 })
 
 test('安全随机 UUID 键每个明确新操作不同', () => {

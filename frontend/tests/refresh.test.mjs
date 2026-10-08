@@ -12,6 +12,7 @@ const models = await loadTs('models')
 const logs = await loadTs('logs')
 const taskControl = await loadTs('task-control')
 const taskDetail = await loadTs('task-detail')
+const taskResolution = await loadTs('task-resolution')
 const { descriptor } = parse(readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8'))
 const componentCode = ts.transpileModule(compileScript(descriptor, { id: 'refresh-test' }).content, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }
@@ -22,8 +23,8 @@ function component(api) {
   const modules = {
     vue: { ...vue, onMounted() {}, onUnmounted() {}, watch() {} },
     './api': { api, ApiRequestError, getApiToken: () => '', clearApiToken() {}, saveApiToken() {} },
-    './models': models, './logs': logs, './task-control': taskControl, './task-detail': taskDetail,
-    './components/InstanceTable.vue': { default: {} }, './components/TaskDetail.vue': { default: {} }
+    './models': models, './logs': logs, './task-control': taskControl, './task-detail': taskDetail, './task-resolution': taskResolution,
+    './components/InstanceTable.vue': { default: {} }, './components/TaskDetail.vue': { default: {} }, './components/TaskResolution.vue': { default: {} }
   }
   const exports = {}
   vm.runInNewContext(componentCode, { exports, require: name => modules[name], window: { location: { hash: '#/overview' }, history: { pushState() {} }, sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} } }, console })
@@ -66,8 +67,8 @@ test('节点成功但实例失败不能提交半份页面或声称刷新成功',
   assert.notEqual(app.loadError.value, '')
 })
 
-const controlledInstance = { id: 'central-a', nodeId: 'node-a', agentInstanceId: 'same', name: 'same', status: 'running' }
-const capabilities = { controlEnabled: true, canControl: true, allowedActions: ['START', 'STOP', 'RESTART'], targets: [{ instanceId: 'central-a', executionMode: 'MOCK', allowedActions: ['START', 'STOP', 'RESTART'] }], reason: '' }
+const controlledInstance = { id: 'central-a', nodeId: 'node-a', agentInstanceId: 'same', name: 'same', status: 'running', dataSource: 'MOCK' }
+const capabilities = { controlEnabled: true, canControl: true, allowedActions: ['START', 'STOP', 'RESTART'], targets: [{ instanceId: 'central-a', executionMode: 'MOCK', blockingTaskId: null, blockedReason: null, canConfirmPending: true, allowedActions: ['START', 'STOP', 'RESTART'] }], reason: '' }
 const baseApi = () => ({ health: async () => ({ status: 'UP', readOnly: false }), nodes: async () => [{ id: 'node-a' }], instances: async () => [controlledInstance], tasks: async () => [], capabilities: async () => capabilities })
 
 test('能力接口失败只关闭操作，不使观察页不可用；只读始终优先', async () => {
@@ -113,6 +114,49 @@ test('确认期间模式变化不发送；已有 UNKNOWN 任务不能重新控�
   await app.confirmControl()
   assert.equal(sent, 0)
   assert.match(app.notice.value, /模式已变化/)
-  app.tasks.value = [models.normalizeTask({ id: 'task-a', instanceId: 'central-a', status: 'UNKNOWN', executionMode: 'MOCK' })]
+  app.capabilities.value = { ...capabilities, targets: [{ ...capabilities.targets[0], blockingTaskId: 'task-a', blockedReason: 'INSTANCE_HAS_UNRESOLVED_TASK', allowedActions: [] }] }
+  app.tasks.value = [models.normalizeTask({ id: 'task-a', instanceId: 'central-a', status: 'UNKNOWN', executionMode: 'MOCK', blocksInstance: true })]
   assert.match(app.actionReason(controlledInstance, 'START'), /未决任务/)
+})
+
+test('权威锁覆盖最近100任务范围；APPLIED旧UNKNOWN不挡独立新动作，旧回执不能解除新锁', async () => {
+  const calls = []
+  const app = component({ ...baseApi(), control: async intent => {
+    calls.push(intent)
+    return models.normalizeTask({ ...intent, id: `new-${calls.length}`, commandId: `new-command-${calls.length}`, status: 'PENDING', executionMode: intent.expectedExecutionMode, blocksInstance: true })
+  } })
+  await app.load()
+  app.tasks.value = []
+  app.capabilities.value = { ...capabilities, targets: [{ ...capabilities.targets[0], blockingTaskId: 'older-than-100', blockedReason: 'INSTANCE_HAS_UNRESOLVED_TASK', allowedActions: [] }] }
+  assert.equal(app.blockingTask(controlledInstance), 'older-than-100')
+  assert.match(app.actionReason(controlledInstance, 'START'), /未决任务/)
+  app.tasks.value = [models.normalizeTask({ id: 'old', instanceId: controlledInstance.id, status: 'UNKNOWN', executionMode: 'MOCK', blocksInstance: false, reviewSummary: { id: 'review', status: 'APPLIED' } })]
+  app.capabilities.value = capabilities
+  assert.equal(app.actionReason(controlledInstance, 'START'), '')
+  app.control('START', controlledInstance); await app.confirmControl()
+  assert.equal(calls.length, 1); assert.match(calls[0].key, /^[0-9a-f-]{36}$/)
+  app.capabilities.value = { ...capabilities, targets: [{ ...capabilities.targets[0], blockingTaskId: 'new-1', blockedReason: 'INSTANCE_HAS_UNRESOLVED_TASK', allowedActions: [] }] }
+  app.mergeTask(models.normalizeTask({ id: 'old', instanceId: controlledInstance.id, status: 'UNKNOWN', executionMode: 'MOCK', blocksInstance: false, reviewSummary: { id: 'review', status: 'APPLIED' } }))
+  assert.equal(app.blockingTask(controlledInstance), 'new-1')
+  assert.match(app.actionReason(controlledInstance, 'START'), /未决任务/)
+  assert.equal(app.instances.value[0].status, 'running')
+})
+
+test('全部目标有锁禁止新动作，但丢ACK原请求仍按显式canConfirmPending授权同键核对', async () => {
+  const app = component(baseApi()); await app.load()
+  app.capabilities.value = taskControl.normalizeCapabilities({ ...capabilities, targets: [{ ...capabilities.targets[0], blockingTaskId: 'accepted-before-ack-loss', blockedReason: 'INSTANCE_HAS_UNRESOLVED_TASK', allowedActions: [] }] })
+  app.intentState.value = { phase: 'uncertain', error: '', intent: { key: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', instanceId: 'central-a', nodeId: 'node-a', agentInstanceId: 'same', name: 'same', action: 'RESTART', expectedExecutionMode: 'MOCK' } }
+  assert.equal(app.canConfirmPending.value, true)
+  assert.notEqual(app.actionReason(controlledInstance, 'RESTART'), '')
+  const authorized = app.capabilities.value
+  app.capabilities.value = { ...authorized, targets: [{ ...authorized.targets[0], canConfirmPending: false }] }
+  assert.equal(app.canConfirmPending.value, false)
+  app.capabilities.value = authorized
+  for (const patch of [{ nodeId: 'changed-node' }, { agentInstanceId: 'changed-container' }, { dataSource: 'LEGACY' }, { dataSource: 'DOCKER' }]) {
+    app.instances.value = [{ ...controlledInstance, ...patch }]
+    assert.equal(app.canConfirmPending.value, false)
+  }
+  app.instances.value = []; assert.equal(app.canConfirmPending.value, false)
+  app.instances.value = [controlledInstance]
+  app.readOnly.value = true; assert.equal(app.canConfirmPending.value, false)
 })

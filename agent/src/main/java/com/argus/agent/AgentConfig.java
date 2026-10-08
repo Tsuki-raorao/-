@@ -21,12 +21,29 @@ public record AgentConfig(int port, String nodeId, String nodeName, String authT
                           boolean controlEnabled, boolean discoveryEnabled, String advertisedHost,
                           int maxCommandOutputBytes, int maxHttpQueueSize,
                           String controlToken, Set<String> controlInstances, Path taskDirectory,
-                          int taskMaxRecords, boolean taskDirectoryConfigured, String bindAddress) {
+                          int taskMaxRecords, boolean taskDirectoryConfigured, String bindAddress,
+                          boolean reviewEnabled, Set<String> reviewInstances) {
     public AgentConfig {
         bindAddress = validateBindAddress(bindAddress);
         controlInstances = Set.copyOf(controlInstances);
+        reviewInstances = Set.copyOf(reviewInstances);
+        if (reviewInstances.stream().anyMatch(value -> !value.matches("[A-Za-z0-9_.-]{1,64}"))) throw new IllegalArgumentException("invalid review instance allowlist");
+        if (reviewEnabled && (authToken.isBlank() || controlToken.isBlank() || controlToken.equals(authToken) || reviewInstances.isEmpty()))
+            throw new IllegalArgumentException("review requires distinct tokens and instance allowlist");
         if (!controlToken.isBlank() && controlToken.equals(authToken))
             throw new IllegalArgumentException("control token must differ from read token");
+    }
+    /** 既有构造器默认不启用人工核对。 */
+    public AgentConfig(int port, String nodeId, String nodeName, String authToken, boolean mock,
+                       String dockerExecutable, String defaultInstanceId, String defaultContainer, int commandTimeoutSeconds,
+                       int maxConcurrentTasks, int maxRequestBytes, int maxHttpThreads, boolean controlEnabled,
+                       boolean discoveryEnabled, String advertisedHost, int maxCommandOutputBytes, int maxHttpQueueSize,
+                       String controlToken, Set<String> controlInstances, Path taskDirectory,
+                       int taskMaxRecords, boolean taskDirectoryConfigured, String bindAddress) {
+        this(port, nodeId, nodeName, authToken, mock, dockerExecutable, defaultInstanceId, defaultContainer,
+                commandTimeoutSeconds, maxConcurrentTasks, maxRequestBytes, maxHttpThreads, controlEnabled, discoveryEnabled,
+                advertisedHost, maxCommandOutputBytes, maxHttpQueueSize, controlToken, controlInstances, taskDirectory,
+                taskMaxRecords, taskDirectoryConfigured, bindAddress, false, Set.of());
     }
     /** 保留持久任务阶段的构造方式，历史默认仍监听全部 IPv4 接口。 */
     public AgentConfig(int port, String nodeId, String nodeName, String authToken, boolean mock,
@@ -80,6 +97,9 @@ public record AgentConfig(int port, String nodeId, String nodeName, String authT
             throw new IllegalArgumentException("control requires distinct read/control tokens and instance allowlist");
         if (!controlToken.isBlank() && controlToken.equals(authToken)) throw new IllegalArgumentException("control token must differ from read token");
         boolean taskDirectoryConfigured = p.containsKey("task.directory") || System.getenv("ARGUS_AGENT_TASK_DIR") != null;
+        boolean reviewEnabled = Boolean.parseBoolean(envOr(p, "ARGUS_AGENT_REVIEW_ENABLED", "review.enabled", "false"));
+        Set<String> reviewInstances = Arrays.stream(envOr(p, "ARGUS_AGENT_REVIEW_INSTANCES", "review.instances", "").split(","))
+                .map(String::trim).filter(value -> !value.isEmpty()).collect(Collectors.toUnmodifiableSet());
         return new AgentConfig(port, id, name,
                 authToken, mock,
                 envOr(p, "ARGUS_AGENT_DOCKER", "docker.executable", "docker"),
@@ -95,7 +115,7 @@ public record AgentConfig(int port, String nodeId, String nodeName, String authT
                         "server.max-http-queue", 1, 1024), controlToken, controlInstances,
                 Path.of(envOr(p, "ARGUS_AGENT_TASK_DIR", "task.directory", "agent/data/task-inbox")),
                 positiveInt(envOr(p, "ARGUS_AGENT_TASK_MAX_RECORDS", "task.max-records", "10000"), "task.max-records", 1, 100000),
-                taskDirectoryConfigured, bindAddress(p, System.getenv()));
+                taskDirectoryConfigured, bindAddress(p, System.getenv()), reviewEnabled, reviewInstances);
     }
 
     /** 显式空环境变量是错误配置，不能回退到文件或全接口监听。 */

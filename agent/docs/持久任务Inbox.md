@@ -12,7 +12,7 @@ POST `/api/agent/tasks` 只接受七个字符串：`commandId/instanceId/action/
 - 过期、节点/Inbox/执行模式不符、目标不允许、实例有未决任务时拒绝。每个实例只允许一个 PENDING/RUNNING/UNKNOWN。
 - 接收时保存解析后的目标容器。执行前再次检查目标、权限、模式和期限；配置变化不会把原模拟命令变成真实命令。
 - RUNNING 持久化成功后才调用执行器。退出成功并核验目标状态才返回 SUCCEEDED；stop 要求 STOPPED，start/restart 要求 RUNNING。这是容器生命周期核验，不代表游戏或应用业务就绪。
-- 调用后超时、中断、命令异常或状态无法确认时为 UNKNOWN。UNKNOWN 不自动重放、不释放实例互斥；人工核对流程另行实现。
+- 调用后超时、中断、命令异常或状态无法确认时为 UNKNOWN。UNKNOWN 不自动重放、不自动释放实例互斥；独立 [人工核对回执](人工核对回执.md) 可在明确接受不确定性后释放原锁，原任务状态与证据保持不变。
 - GET `/api/agent/tasks/{commandId}` 用控制令牌读取持久结果；未找到返回 404。关闭控制停止新接受/执行，但允许查询原结果。
 
 任务响应为 `taskId/instanceId/action/status/message/createdAt/startedAt/finishedAt/executionMode/nodeId/storeId/resultCode/observedStatus`。`taskId=commandId`，未开始/未结束时间为 null。结果码为固定值，例如 ACCEPTED、EXECUTING、STATE_CONFIRMED、EXPIRED、TARGET_CHANGED、EXECUTION_CONTEXT_CHANGED、EXECUTION_UNCERTAIN、AGENT_RESTARTED；不暴露命令 stderr 或本地路径。
@@ -24,12 +24,14 @@ POST `/api/agent/tasks` 只接受七个字符串：`commandId/instanceId/action/
 | `ARGUS_AGENT_CONTROL_ENABLED` | `control.enabled` | false |
 | `ARGUS_AGENT_CONTROL_TOKEN` | `control.token` | 空 |
 | `ARGUS_AGENT_CONTROL_INSTANCES` | `control.instances` | 空，逗号分隔局部实例 ID |
+| `ARGUS_AGENT_REVIEW_ENABLED` | `review.enabled` | false，独立人工核对开关 |
+| `ARGUS_AGENT_REVIEW_INSTANCES` | `review.instances` | 空，独立核对允许列表 |
 | `ARGUS_AGENT_TASK_DIR` | `task.directory` | agent/data/task-inbox |
 | `ARGUS_AGENT_TASK_MAX_RECORDS` | `task.max-records` | 10000，范围 1–100000 |
 
 开放控制要求读取令牌与控制令牌非空、不同，并有独立实例允许列表；mock 也遵守。控制令牌可读取，读取令牌不能提交或查询控制任务。默认关闭的 POST 返回 control_disabled；不接受 URL 令牌。
 
-控制开启、显式设置状态目录或目录中存在 store.id 时才打开 Inbox。测试为每个 Agent 指定项目内独立目录。不要让两台逻辑节点共享目录，不把 Inbox、令牌或测试状态提交 Git。
+控制或核对开启、显式设置状态目录或目录中存在 store.id 时才打开 Inbox。默认两项写开关都关闭，不会意外创建状态目录。测试为每个 Agent 指定项目内独立目录。不要让两台逻辑节点共享目录，不把 Inbox、令牌或测试状态提交 Git。
 
 ## 文件格式与写入边界
 
@@ -38,6 +40,7 @@ POST `/api/agent/tasks` 只接受七个字符串：`commandId/instanceId/action/
 | `.inbox.lock` | JDK FileLock 独占锁；第二进程拒绝启动 |
 | `store.id` | 持久 UUID；普通进程重启不改变 |
 | `<commandId>.task` | 每条命令的请求、目标容器、状态、时间与结果 |
+| `<commandId>.resolution` | 原任务的独立 CLOSED 核对回执；最多一条，不挤占新任务容量 |
 | `.write-<UUID>.tmp` | 写入中的临时文件；启动不把残留临时文件当作接受记录 |
 
 任务记录依次为：4 字节大端格式魔数 `0x41524731`、4 字节大端 JSON 长度、UTF-8 JSON、32 字节 SHA-256 校验。JSON 含原七字段命令（编码为字符串）、目标、状态、时间、结果码和观测状态。校验用于发现损坏，不是防止本地管理员篡改的签名。
@@ -45,6 +48,8 @@ POST `/api/agent/tasks` 只接受七个字符串：`commandId/instanceId/action/
 写入先在同一目录创建临时文件，完整写入后 `FileChannel.force(true)`，再以 `ATOMIC_MOVE + REPLACE_EXISTING` 替换；不支持原子替换就拒绝写入。Windows JDK 通常不支持目录 fsync；支持的系统尝试同步目录。这一限制不被表述为断电保证。
 
 Inbox 损坏、格式不合法、身份丢失而记录仍在或目录锁失败时拒绝打开。运行中落盘失败会停用新执行；磁盘中的 RUNNING 仍按不确定结果处理。记录达到容量后只拒绝新命令，不清除旧去重记录。关闭时先停止调度、等待执行线程及子进程结束，再释放目录锁；worker 未结束时不释放锁给新进程。
+
+核对回执也受同一目录锁和原子同步保护。加载时先读全部原任务，再验证回执的完整请求、哈希、身份、原 TaskView 与文件名，之后重建锁；已经闭合的 UNKNOWN 跳过旧锁重建。原 `.task` 仍永久保留。关闭还等待核对观察作用域及已知进程/reader 退出；超时则保留目录锁并报告失败，资源退出后可以再次关闭。进程强制退出会由操作系统释放文件锁，旧进程遗留动作属于人工需核对的边界。
 
 ## 恢复与运维限制
 

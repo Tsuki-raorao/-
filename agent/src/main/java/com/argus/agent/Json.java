@@ -56,4 +56,8 @@ public final class Json {
     public static Map<String, String> flatObject(String body) {
         return StrictStringJson.parse(body);
     }
+    /** 仅指定字段接受真正 JSON boolean；字符串 "true" 不会被偷换为风险确认。 */
+    public static Map<String, String> flatObjectWithBooleans(String body, java.util.Set<String> booleanFields) {
+        return StrictStringJson.parse(body, booleanFields);
+    }
 }

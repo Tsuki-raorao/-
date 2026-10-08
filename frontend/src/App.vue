@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ApiRequestError, api, clearApiToken, getApiToken, saveApiToken, type Instance, type NodeItem, type Task } from './api'
-import { actionLabel, executionLabel, instanceQuality, metricsLabel, nodeQuality, percent, sourceLabel, taskResultLabel, taskTerminal, timeLabel, type TaskAction } from './models'
+import { actionLabel, executionLabel, instanceQuality, metricsLabel, nodeQuality, percent, sourceLabel, taskResultLabel, timeLabel, type TaskAction } from './models'
 import { createLogReader, type LogState } from './logs'
 import { allowedTarget, createIntentSender, disabledCapabilities, newIntentKey, type ActionIntent, type Capabilities, type IntentState } from './task-control'
 import { createTaskReader, type TaskDetailState } from './task-detail'
 import InstanceTable from './components/InstanceTable.vue'
 import TaskDetail from './components/TaskDetail.vue'
+import TaskResolution from './components/TaskResolution.vue'
+import { readReviewIntent } from './task-resolution'
 
 type Page = 'overview' | 'nodes' | 'instances' | 'tasks' | 'logs'
 const nav = [{ id: 'overview', label: '概览', icon: '◈' }, { id: 'nodes', label: '节点', icon: '⌘' }, { id: 'instances', label: '实例', icon: '▣' }, { id: 'tasks', label: '任务', icon: '✓' }, { id: 'logs', label: '日志', icon: '≡' }] as const
@@ -32,6 +34,11 @@ const intentState = ref<IntentState>({ intent: null, phase: 'idle', error: '' })
 const confirmation = ref<Omit<ActionIntent, 'key'> | null>(null)
 const selectedTask = ref('')
 const taskDetail = ref<TaskDetailState>({ id: '', phase: 'idle', task: null, events: [], error: '' })
+const pendingReviewTask = ref(''), pendingReviewError = ref('')
+function readReviewRecovery() {
+  try { pendingReviewTask.value = readReviewIntent(window.sessionStorage)?.taskId || ''; pendingReviewError.value = '' }
+  catch { pendingReviewTask.value = ''; pendingReviewError.value = '待确认人工核对记录无法读取；请核对服务端记录，不要创建替代核对。' }
+}
 const now = ref(Date.now())
 const currentLabel = computed(() => nav.find(n => n.id === page.value)?.label || '概览')
 const nodeMap = computed(() => new Map(nodes.value.map(node => [node.id, node])))
@@ -124,6 +131,7 @@ async function load() {
     nodes.value = nextNodes
     instances.value = nextInstances
     tasks.value = nextTasks
+    readReviewRecovery()
     loadError.value = connected.value ? '' : '控制中心健康检查未通过，操作不可用'
     authRequired.value = false
     if (selectedInstance.value && !nextInstances.some(item => item.id === selectedInstance.value)) selectedInstance.value = ''
@@ -169,6 +177,7 @@ function invalidateRequests() {
   selectedInstance.value = ''
   logReader.cancel()
   selectedTask.value = ''
+  pendingReviewTask.value = ''; pendingReviewError.value = ''
   taskReader.cancel()
 }
 function removeApiToken() {
@@ -184,10 +193,15 @@ function actionReason(instance: Instance, action: TaskAction): string {
   if (readOnly.value) return '控制中心处于只读模式'
   if (intentState.value.phase !== 'idle') return '已有提交待确认，请先核对原请求'
   if (!instance.id || !instance.nodeId || !instance.agentInstanceId) return '实例身份不完整'
-  if (tasks.value.some(task => task.instanceId === instance.id && task.executionMode !== 'LEGACY_MOCK' && !taskTerminal(task))) return '实例已有未决任务，请查看任务详情'
+  if (blockingTask(instance)) return '实例已有未决任务，请查看阻塞任务详情'
   if (!allowedTarget(capabilities.value, instance.id, action)) return capabilities.value.reason || '当前令牌或目标不允许此操作'
   return ''
 }
+function blockingTask(instance: Instance): string {
+  const target = capabilities.value.targets.find(target => target.instanceId === instance.id)
+  return target ? target.blockingTaskId || '' : tasks.value.find(task => task.instanceId === instance.id && task.blocksInstance === true)?.id || ''
+}
+function reviewChanged() { void load(); void loadTaskDetail() }
 function control(action: TaskAction, instance: Instance) {
   const reason = actionReason(instance, action)
   if (reason) { notice.value = reason; return }
@@ -224,8 +238,13 @@ async function confirmControl() {
 }
 const canConfirmPending = computed(() => {
   const intent = intentState.value.intent
-  return !!intent && intentState.value.phase === 'uncertain' && connected.value && !loading.value && !readOnly.value
-    && allowedTarget(capabilities.value, intent.instanceId, intent.action)?.executionMode === intent.expectedExecutionMode
+  if (!intent || intentState.value.phase !== 'uncertain' || !connected.value || loading.value || readOnly.value) return false
+  const instance = instances.value.find(item => item.id === intent.instanceId)
+  if (!instance || instance.nodeId !== intent.nodeId || instance.agentInstanceId !== intent.agentInstanceId || instance.dataSource !== intent.expectedExecutionMode) return false
+  const caps = capabilities.value, target = caps.targets.find(item => item.instanceId === intent.instanceId)
+  // 已有互斥不能拦住同键查询：这里仅重送持久保留的原请求，不给新操作放行。
+  return caps.controlEnabled && caps.canControl && caps.allowedActions.includes(intent.action) && target?.executionMode === intent.expectedExecutionMode
+    && target.canConfirmPending === true
 })
 async function confirmPending() {
   if (!canConfirmPending.value) return
@@ -274,6 +293,7 @@ onUnmounted(() => {
         <div v-if="loadError" class="data-banner error" role="alert">读取失败：{{ loadError }}。未使用演示数据替代。</div>
         <div v-if="readOnly" class="data-banner">当前为只读模式：可以查询快照和 Agent 最近日志，写操作关闭。</div>
         <div v-if="hasMockData" class="data-banner mock" role="status">页面包含模拟数据，相关条目已标记，不代表真实服务器状态。</div>
+        <div v-if="connected && (pendingReviewTask || pendingReviewError)" class="data-banner pending-review-recovery" role="status"><strong>人工核对提交仍需确认</strong><p>{{ pendingReviewError || '保留了原请求标识。打开原任务会先查询已有核对记录，不自动重新提交。' }}</p><button v-if="pendingReviewTask" class="text-btn" @click="showTask(pendingReviewTask)">恢复待确认人工核对</button></div>
         <div v-if="intentState.phase !== 'idle'" class="data-banner pending-intent" role="status"><strong>{{ intentState.phase === 'submitting' ? '正在等待排队确认' : '提交结果待确认' }}</strong><p v-if="intentState.intent">{{ executionLabel(intentState.intent.expectedExecutionMode) }} · {{ actionLabel(intentState.intent.action) }} {{ intentState.intent.name }} · 节点 {{ intentState.intent.nodeId }} · 实例 {{ intentState.intent.instanceId }}</p><p>{{ intentState.error || '请等待，重复点击不会创建新命令。' }}</p><p>待确认请求保留原标识。核对会重送同一个请求；如果之前未入队，本次可能首次排队。</p><button v-if="intentState.phase === 'uncertain' && intentState.intent" class="refresh" :disabled="!canConfirmPending" @click="confirmPending">用原请求核对</button><p v-if="intentState.phase === 'uncertain' && !canConfirmPending">恢复连接并验证操作权限后可核对。不要清理浏览器中的待确认记录。</p></div>
 
         <template v-if="page === 'overview'">
@@ -284,7 +304,7 @@ onUnmounted(() => {
             <div class="metric-card"><span class="metric-label">活跃告警</span><strong>—</strong><span class="metric-foot neutral">告警源尚未接入</span></div>
           </section>
           <section class="grid-two"><div class="panel"><div class="panel-head"><div><h2>资源概览</h2><p>接入指标存储后显示历史曲线</p></div></div><div class="empty-state">当前仅展示采集快照，尚无历史指标曲线。</div></div><div class="panel"><div class="panel-head"><div><h2>需要关注</h2><p>当前没有接入告警源</p></div></div><div class="empty-state">暂无可验证的告警事件。</div></div></section>
-          <section class="panel instance-panel"><div class="panel-head"><div><h2>实例快照</h2><p>180 秒后标为旧快照；保留最近一次观测值</p></div><button class="text-btn" @click="go('instances')">查看实例 →</button></div><InstanceTable :items="instances" :nodes="nodes" :now="now" :action-reason="actionReason" @control="control" /></section>
+          <section class="panel instance-panel"><div class="panel-head"><div><h2>实例快照</h2><p>180 秒后标为旧快照；保留最近一次观测值</p></div><button class="text-btn" @click="go('instances')">查看实例 →</button></div><InstanceTable :items="instances" :nodes="nodes" :now="now" :action-reason="actionReason" :blocking-task="blockingTask" @control="control" @show-task="showTask" /></section>
         </template>
 
         <template v-else-if="page === 'nodes'">
@@ -303,7 +323,7 @@ onUnmounted(() => {
         <template v-else-if="page === 'instances'">
           <section class="panel full"><div class="panel-head"><div><h2>服务实例</h2><p>同名容器按所属节点和中央实例 ID 区分</p></div><button class="primary" @click="showUnavailable('创建实例')">＋ 创建实例</button></div>
             <div class="data-banner">{{ capabilities.canControl && capabilities.controlEnabled ? '受控操作可用；提交前确认目标与执行模式，排队后到任务页查询结果。' : capabilities.reason }} 默认关闭控制。任务结果与实例采集状态分别记录。</div>
-            <InstanceTable :items="instances" :nodes="nodes" :now="now" :action-reason="actionReason" @control="control" />
+            <InstanceTable :items="instances" :nodes="nodes" :now="now" :action-reason="actionReason" :blocking-task="blockingTask" @control="control" @show-task="showTask" />
           </section>
         </template>
 
@@ -313,6 +333,7 @@ onUnmounted(() => {
             <div class="task-list"><button v-for="task in tasks" :key="task.id" class="task-row task-select" :class="{ selected: selectedTask === task.id }" :data-task-id="task.id" :disabled="!task.id" @click="showTask(task.id)"><span class="task-check" :class="task.status.toLowerCase()">{{ task.status === 'UNKNOWN' ? '?' : task.status === 'FAILED' ? '!' : '·' }}</span><div class="task-main"><strong>{{ actionLabel(task.action) }} · {{ executionLabel(task.executionMode) }}</strong><span>{{ task.nodeId || '历史节点未记录' }} / {{ task.agentInstanceId || task.instanceId }}</span><small class="identifier">实例：{{ task.instanceId }} · 任务：{{ task.id }}</small></div><span :class="['task-status', task.executionMode === 'UNKNOWN' ? 'unknown' : task.status.toLowerCase()]">{{ taskResultLabel(task) }}</span><time class="task-time">{{ timeLabel(task.updatedAt || task.createdAt) }}</time><span class="text-btn">查看详情 →</span></button></div>
           </section>
           <TaskDetail v-if="selectedTask" :state="taskDetail" @refresh="loadTaskDetail" @close="selectedTask = ''" />
+          <TaskResolution v-if="selectedTask && connected" :key="selectedTask" :task-id="selectedTask" :read-only="readOnly" @changed="reviewChanged" @select-task="showTask" />
         </template>
 
         <template v-else-if="page === 'logs'">

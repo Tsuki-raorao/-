@@ -2,8 +2,8 @@
 import type { Instance, NodeItem, TaskAction } from '../models'
 import { actionLabel, bytes, instanceQuality, metricsLabel, missingMetric, percent, sourceLabel, timeLabel } from '../models'
 
-const props = defineProps<{ items: Instance[]; nodes: NodeItem[]; now: number; actionReason: (item: Instance, action: TaskAction) => string }>()
-const emit = defineEmits<{ control: [action: TaskAction, instance: Instance] }>()
+const props = defineProps<{ items: Instance[]; nodes: NodeItem[]; now: number; actionReason: (item: Instance, action: TaskAction) => string; blockingTask: (item: Instance) => string }>()
+const emit = defineEmits<{ control: [action: TaskAction, instance: Instance]; showTask: [id: string] }>()
 const actions: TaskAction[] = ['START', 'STOP', 'RESTART']
 const parent = (item: Instance) => props.nodes.find(node => node.id === item.nodeId)
 const quality = (item: Instance) => instanceQuality(item, parent(item), props.now)
@@ -20,7 +20,7 @@ const statusLabel = (status: Instance['status']) => ({ running: '运行中', sto
       <div class="observed-state"><span class="status-pill" :class="item.status"><i></i>{{ statusLabel(item.status) }}</span><span :class="['snapshot-badge', quality(item).state]" :title="quality(item).detail">{{ quality(item).label }}</span></div>
       <div class="resource-values"><b>{{ bytes(item.memoryBytes, item.metricsStatus) }}</b><small>CPU {{ percent(item.cpuPercent, item.metricsStatus) }}</small><small>玩家：{{ item.players === null ? missingMetric(item.metricsStatus) : `${item.players} 人` }}</small><small :class="{ 'mock-text': item.dataSource === 'MOCK' }">{{ sourceLabel(item.dataSource) }} · {{ metricsLabel(item.metricsStatus) }}</small></div>
       <div class="sample-time"><span>{{ timeLabel(item.sampledAt) }}</span><small>最近发现：{{ timeLabel(item.lastSeenAt) }}</small><small>{{ quality(item).detail }}</small></div>
-      <div class="row-actions control-actions"><button v-for="action in actions" :key="action" :disabled="Boolean(actionReason(item, action))" @click="emit('control', action, item)" :title="actionReason(item, action) || `确认${actionLabel(action)} ${item.name}`" :aria-label="`${actionLabel(action)} ${item.name}`">{{ action === 'START' ? '▶' : action === 'STOP' ? 'Ⅱ' : '↻' }}</button></div>
+      <div class="row-actions control-actions"><button v-for="action in actions" :key="action" :disabled="Boolean(actionReason(item, action))" @click="emit('control', action, item)" :title="actionReason(item, action) || `确认${actionLabel(action)} ${item.name}`" :aria-label="`${actionLabel(action)} ${item.name}`">{{ action === 'START' ? '▶' : action === 'STOP' ? 'Ⅱ' : '↻' }}</button><button v-if="blockingTask(item)" class="blocking-task" @click="emit('showTask', blockingTask(item))">查看阻塞任务</button></div>
     </div>
   </div>
 </template>

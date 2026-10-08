@@ -3,6 +3,7 @@ package com.argus.agent.service;
 import com.argus.agent.Json;
 import com.argus.agent.model.TaskCommand;
 import com.argus.agent.model.TaskView;
+import com.argus.agent.model.ResolutionReceipt;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -24,9 +25,12 @@ public final class TaskInbox implements AutoCloseable {
         }
     }
     private static final int MAGIC = 0x41524731;
+    private static final int RESOLUTION_MAGIC = 0x41525231;
     private final Path directory;
     private final int capacity;
     private final Map<String, Entry> records = new LinkedHashMap<>();
+    private final Map<String, ResolutionReceipt> resolutions = new LinkedHashMap<>();
+    private final Map<String, String> resolutionOwners = new HashMap<>();
     private FileChannel lockChannel;
     private FileLock lock;
     private String storeId;
@@ -51,7 +55,7 @@ public final class TaskInbox implements AutoCloseable {
                 if (!TaskCommand.uuid(storeId)) throw new IOException("invalid identity");
             } else {
                 try (var files = Files.list(this.directory)) {
-                    if (files.anyMatch(file -> file.getFileName().toString().endsWith(".task"))) throw new IOException("identity missing");
+                    if (files.anyMatch(file -> file.getFileName().toString().endsWith(".task") || file.getFileName().toString().endsWith(".resolution"))) throw new IOException("identity missing");
                 }
                 storeId = UUID.randomUUID().toString();
                 atomicWrite(identity, (storeId + "\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -63,6 +67,18 @@ public final class TaskInbox implements AutoCloseable {
                     if (!file.getFileName().toString().equals(entry.command().commandId() + ".task")
                             || !entry.task().storeId().equals(storeId) || records.putIfAbsent(entry.command().commandId(), entry) != null)
                         throw new IOException("invalid record identity");
+                }
+            }
+            // 原任务必须先完整装载，回执只能引用真实存在且完全相同的原始证据。
+            try (var files = Files.list(this.directory)) {
+                for (Path file : files.filter(path -> path.getFileName().toString().endsWith(".resolution")).sorted().toList()) {
+                    if (Files.isSymbolicLink(file) || !Files.isRegularFile(file) || Files.size(file) > 65536) throw new IOException("invalid resolution");
+                    ResolutionReceipt receipt = ResolutionReceipt.fromDiskJson(new String(unpack(Files.readAllBytes(file), RESOLUTION_MAGIC), java.nio.charset.StandardCharsets.UTF_8));
+                    validateResolution(receipt);
+                    if (!file.getFileName().toString().equals(receipt.request().commandId() + ".resolution")
+                            || resolutions.putIfAbsent(receipt.request().commandId(), receipt) != null
+                            || resolutionOwners.putIfAbsent(receipt.request().resolutionId(), receipt.request().commandId()) != null)
+                        throw new IOException("invalid resolution identity");
                 }
             }
         } catch (Exception failure) {
@@ -77,9 +93,32 @@ public final class TaskInbox implements AutoCloseable {
     public synchronized Entry get(String id) { return records.get(id); }
     public synchronized List<Entry> all() { return List.copyOf(records.values()); }
     public synchronized boolean full() { return records.size() >= capacity; }
+    public synchronized ResolutionReceipt resolution(String commandId) { return resolutions.get(commandId); }
+    public synchronized String resolutionOwner(String resolutionId) { return resolutionOwners.get(resolutionId); }
+
+    /** 每个已有任务最多一个独立回执，不占新命令容量，也绝不清除原去重记录。 */
+    public synchronized void putResolution(ResolutionReceipt receipt) {
+        if (!healthy()) throw new TaskRejected(503, "inbox_unavailable");
+        if (resolutions.containsKey(receipt.request().commandId()) || resolutionOwners.containsKey(receipt.request().resolutionId()))
+            throw new TaskRejected(409, "resolution_conflict");
+        try {
+            validateResolution(receipt);
+            byte[] payload = receipt.diskJson().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            atomicWrite(directory.resolve(receipt.request().commandId() + ".resolution"), pack(payload, RESOLUTION_MAGIC));
+            resolutions.put(receipt.request().commandId(), receipt);
+            resolutionOwners.put(receipt.request().resolutionId(), receipt.request().commandId());
+        } catch (Exception failure) { healthy = false; throw new TaskRejected(503, "inbox_unavailable"); }
+    }
+    private void validateResolution(ResolutionReceipt receipt) throws IOException {
+        Entry original = records.get(receipt.request().commandId());
+        if (original == null || !receipt.request().matches(original.command()) || !original.task().equals(receipt.task())
+                || !storeId.equals(receipt.request().expectedStoreId())) throw new IOException("resolution does not match original task");
+    }
 
     public synchronized void put(Entry entry) {
         if (!healthy()) throw new TaskRejected(503, "inbox_unavailable");
+        if (resolutions.containsKey(entry.command().commandId()) && !records.get(entry.command().commandId()).equals(entry))
+            throw new TaskRejected(409, "closed_task_immutable");
         if (!records.containsKey(entry.command().commandId()) && full()) throw new TaskRejected(503, "inbox_capacity");
         try {
             atomicWrite(directory.resolve(entry.command().commandId() + ".task"), encode(entry));
@@ -115,20 +154,16 @@ public final class TaskInbox implements AutoCloseable {
                 "status", task.status(), "message", task.message(), "createdAt", task.createdAt(),
                 "startedAt", task.startedAt(), "finishedAt", task.finishedAt(),
                 "resultCode", task.resultCode(), "observedStatus", task.observedStatus()).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return pack(payload, MAGIC);
+    }
+    private byte[] pack(byte[] payload, int magic) throws Exception {
         if (payload.length > 64000) throw new IOException("record too large");
         byte[] digest = MessageDigest.getInstance("SHA-256").digest(payload);
-        return ByteBuffer.allocate(8 + payload.length + digest.length).putInt(MAGIC).putInt(payload.length).put(payload).put(digest).array();
+        return ByteBuffer.allocate(8 + payload.length + digest.length).putInt(magic).putInt(payload.length).put(payload).put(digest).array();
     }
 
     private Entry decode(byte[] bytes) throws Exception {
-        if (bytes.length < 40) throw new IOException("invalid record");
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        if (buffer.getInt() != MAGIC) throw new IOException("invalid format");
-        int length = buffer.getInt();
-        if (length < 0 || length != bytes.length - 40) throw new IOException("invalid length");
-        byte[] payload = new byte[length]; buffer.get(payload);
-        byte[] digest = new byte[32]; buffer.get(digest);
-        if (!MessageDigest.isEqual(digest, MessageDigest.getInstance("SHA-256").digest(payload))) throw new IOException("checksum mismatch");
+        byte[] payload = unpack(bytes, MAGIC);
         Map<String, String> values = Json.flatObject(new String(payload, java.nio.charset.StandardCharsets.UTF_8));
         if (!values.keySet().equals(Set.of("command", "target", "status", "message", "createdAt", "startedAt", "finishedAt", "resultCode", "observedStatus")))
             throw new IOException("invalid fields");
@@ -142,6 +177,17 @@ public final class TaskInbox implements AutoCloseable {
                 values.get("message"), values.get("createdAt"), values.get("startedAt"), values.get("finishedAt"),
                 command.expectedExecutionMode(), command.expectedNodeId(), command.expectedStoreId(), values.get("resultCode"), values.get("observedStatus"));
         return new Entry(command, values.get("target"), task);
+    }
+    private byte[] unpack(byte[] bytes, int magic) throws Exception {
+        if (bytes.length < 40) throw new IOException("invalid record");
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        if (buffer.getInt() != magic) throw new IOException("invalid format");
+        int length = buffer.getInt();
+        if (length < 0 || length != bytes.length - 40) throw new IOException("invalid length");
+        byte[] payload = new byte[length]; buffer.get(payload);
+        byte[] digest = new byte[32]; buffer.get(digest);
+        if (!MessageDigest.isEqual(digest, MessageDigest.getInstance("SHA-256").digest(payload))) throw new IOException("checksum mismatch");
+        return payload;
     }
 
     @Override public synchronized void close() { closed = true; closeResources(); }

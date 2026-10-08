@@ -4,8 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
@@ -15,6 +13,8 @@ import static com.argus.agent.command.CommandFailure.Reason;
 
 /** 参数数组启动子进程，边读输出边等待退出；统一限制总时间与输出字节数。 */
 public final class ProcessCommandRunner implements CommandRunner {
+    private final ExecutionRegistry executions = new ExecutionRegistry();
+    @Override public ExecutionRegistry executionRegistry() { return executions; }
     @Override
     public String run(List<String> command, int timeoutSeconds, int maxOutputBytes) {
         if (timeoutSeconds <= 0 || maxOutputBytes <= 0) throw new IllegalArgumentException("invalid command limits");
@@ -24,7 +24,8 @@ public final class ProcessCommandRunner implements CommandRunner {
         } catch (IOException | RuntimeException failure) {
             throw new CommandFailure(Reason.START_FAILED);
         }
-        ProcessTree processTree = new ProcessTree(process);
+        // reader 创建后才可把两类资源一起登记；读取函数通过固定 holder 引用本次进程树。
+        ExecutionRegistry.OwnedProcess[] holder = new ExecutionRegistry.OwnedProcess[1];
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
         FutureTask<byte[]> readOutput = new FutureTask<>(() -> {
             try (var stream = process.getInputStream(); var output = new ByteArrayOutputStream()) {
@@ -33,7 +34,7 @@ public final class ProcessCommandRunner implements CommandRunner {
                 while ((read = stream.read(buffer)) != -1) {
                     if (read > maxOutputBytes - output.size()) {
                         // 截断的容器清单不能当作完整清单返回；先停止进程，再明确报告超限。
-                        processTree.terminate();
+                        holder[0].terminate();
                         throw new CommandFailure(Reason.OUTPUT_LIMIT);
                     }
                     output.write(buffer, 0, read);
@@ -43,8 +44,10 @@ public final class ProcessCommandRunner implements CommandRunner {
         });
         Thread reader = new Thread(readOutput, "argus-command-output");
         reader.setDaemon(true);
-        reader.start();
+        ExecutionRegistry.OwnedProcess processTree = executions.register(process, reader);
+        holder[0] = processTree;
         try {
+            reader.start();
             process.getOutputStream().close();
             // 等待期间记录本进程的后代，终止前再补一次快照，不按系统进程名查杀。
             while (true) {
@@ -77,39 +80,11 @@ public final class ProcessCommandRunner implements CommandRunner {
             readOutput.cancel(true);
             try { reader.join(1000); } catch (InterruptedException stopped) { interrupted = true; }
             if (interrupted) Thread.currentThread().interrupt();
+            // kill 请求与限时等待并非退出证明；仍活资源保留在登记表，阻止人工核对放行。
+            if (processTree.processesAlive() || processTree.readerAlive()) throw new CommandFailure(Reason.CLEANUP_UNCONFIRMED);
         }
     }
 
     private static long remaining(long deadline) { return Math.max(0, deadline - System.nanoTime()); }
 
-    /** 只跟踪本次启动的进程树，保存句柄后再终止父进程，避免父退出后丢失后代关系。 */
-    private static final class ProcessTree {
-        private final Process parent;
-        private final Set<ProcessHandle> descendants = new LinkedHashSet<>();
-        private ProcessTree(Process parent) { this.parent = parent; }
-
-        synchronized void capture() {
-            parent.descendants().forEach(descendants::add);
-            // 父进程已退出时，仍可通过此前记录的后代继续找到孙进程。
-            for (ProcessHandle child : List.copyOf(descendants)) child.descendants().forEach(descendants::add);
-        }
-
-        synchronized void terminate() {
-            capture();
-            // 先固定后代清单，再终止父进程和清单里的进程；重复调用也是安全的。
-            if (parent.isAlive()) parent.destroyForcibly();
-            for (ProcessHandle child : descendants) if (child.isAlive()) child.destroyForcibly();
-        }
-
-        void awaitTermination() throws InterruptedException {
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
-            parent.waitFor(remaining(deadline), TimeUnit.NANOSECONDS);
-            List<ProcessHandle> snapshot;
-            synchronized (this) { snapshot = List.copyOf(descendants); }
-            for (ProcessHandle child : snapshot) {
-                try { child.onExit().get(remaining(deadline), TimeUnit.NANOSECONDS); }
-                catch (ExecutionException | TimeoutException ignored) { /* 清理有时间上限，不无限阻塞调用方。 */ }
-            }
-        }
-    }
 }

@@ -26,6 +26,9 @@ control.enabled=false
 control.token=
 # 控制采用独立允许列表，自动发现容器不等于获得控制权限。
 control.instances=
+# 人工核对只记录接纳不确定性，不执行原动作；与 control.enabled 独立，默认关闭。
+review.enabled=false
+review.instances=
 # 默认仅控制开启、显式配置目录或发现既有 store.id 时打开 Inbox。
 # task.directory=agent/data/task-inbox
 task.max-records=10000

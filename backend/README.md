@@ -10,7 +10,7 @@
 
 ## 运行
 
-需要 JDK 17 和 Maven 3.9+。默认使用本地 H2 文件数据库 `./data/argus`，首次启动由 Flyway 执行 V1 至 V5 迁移：
+需要 JDK 17 和 Maven 3.9+。默认使用本地 H2 文件数据库 `./data/argus`，首次启动由 Flyway 执行 V1 至 V6 迁移：
 
 ```bash
 mvn spring-boot:run
@@ -25,7 +25,7 @@ java -jar target/argus-control-center-0.1.0-SNAPSHOT.jar
 
 ## 数据库配置
 
-V1–V3 SQL 位于 `src/main/resources/db/migration`，V4/V5 Java 迁移位于 `src/main/java/db/migration`。除了节点、实例、任务、日志，还有任务队列、实例互斥和追加事件表。默认使用 H2 文件数据库，重启后保留数据；测试使用隔离 H2/MySQL 和同一套 Flyway 迁移。
+V1–V3 SQL 位于 `src/main/resources/db/migration`，V4–V6 Java 迁移位于 `src/main/java/db/migration`。除了节点、实例、任务、日志，还有任务队列、实例互斥、人工核对意图/队列和追加事件表。默认使用 H2 文件数据库，重启后保留数据；测试使用隔离 H2/MySQL 和同一套 Flyway 迁移。V5 已正式发布，本轮只追加 V6，不能重写旧迁移。
 
 使用 MySQL 时，先创建 `argus` 数据库和账号，再以 `mysql` profile 启动：
 
@@ -51,6 +51,9 @@ IDEA 中导入本目录的 `pom.xml`，使用 JDK 17，在 `Run → Edit Configu
 * `GET /api/control/capabilities`：当前令牌可操作的目标、动作与执行模式
 * `POST /api/instances/{id}/actions`：操作 Bearer 令牌、UUID `Idempotency-Key`，body：`{"action":"START","expectedExecutionMode":"MOCK"}`；首次与同键重试均 HTTP 202
 * `GET /api/tasks`（最近 100 条）、`GET /api/tasks/{id}`、`GET /api/tasks/{id}/events`
+* `GET /api/tasks/{id}/review-capabilities`、`GET /api/tasks/{id}/review-evidence`：核对权限与确认前远端证据
+* `POST /api/tasks/{id}/resolutions`：独立核对幂等键、理由/证据及两个风险确认；HTTP 202 只代表持久接收
+* `GET /api/tasks/{id}/resolution`、`GET /api/task-resolutions/{id}`、`GET /api/task-resolutions/{id}/events`
 * `GET /api/logs?instanceId=<控制中心实例ID>&limit=100`：数据库日志摘要
 
 控制中心到 Agent 的只读查询接口默认关闭，开启前需要设置 `ARGUS_AGENT_GATEWAY_ENABLED=true` 和 Agent 主机白名单 `ARGUS_AGENT_GATEWAY_ALLOWED_HOSTS`。接口、超时、认证和安全边界见 [开发文档](docs/开发文档.md) 与项目 [接口约定](../docs/API.md)。
@@ -59,6 +62,8 @@ IDEA 中导入本目录的 `pom.xml`，使用 JDK 17，在 `Run → Edit Configu
 
 控制默认关闭：`ARGUS_TASK_CONTROL_ENABLED=false`、`ARGUS_TASK_ALLOW_DOCKER=false`。仅在独立测试环境显式提供查看/操作令牌、Agent 读取/控制令牌、主机和中央实例允许列表，并打开旧网关控制 gate 后，才可接收新任务；生产仍维持只读。查看令牌不能写节点或创建任务。已接收任务通过固定 commandId 查询恢复，UNKNOWN 保留互斥、不自动重做。配置、有限恢复窗口和吞吐边界见开发文档，不宣称 Docker 副作用 exactly-once。
 
+UNKNOWN 人工核对默认另行关闭：`ARGUS_TASK_REVIEW_ENABLED=false`、允许列表为空。操作者先读取原 Agent 记录和执行器证据，再提交理由、证据和两个明确确认。核对意图先入库，后台按原绑定查询/闭合 Agent 回执，最终才条件解除中央原锁；原 UNKNOWN 结果不变、原动作永不重放。BLOCKED 可同键同正文显式续办；APPLIED 仅指核对完成，不能当成原动作成功。详情见 [人工核对契约](../docs/UNKNOWN任务人工核对设计.md)。本轮 V6 仅本地实现和隔离验证，尚未部署生产。
+
 实例使用中央 ID 与 `nodeId + agentInstanceId` 两种身份：已有 ID 和历史任务日志保持不变，新发现实例使用 UUID。采集响应明确区分真实零值、未支持的 `null`、`MOCK` 演示和 `LEGACY` 未验证数据。完整快照校验通过后整批入库，失败不会更新成功时间或用零覆盖旧指标。具体时间语义和迁移边界见上述开发文档。
 
-2026-10-09 最新后端验证共 57 项，一次完整运行全部通过、0 跳过；包括 19 项任务集成、3 项开关策略及 5 项真实隔离 MySQL 专项。新增恢复场景确认：V5 新外键逐列继承旧父键类型/字符集/排序规则，已成功安装旧 V5 的库不重跑迁移。本次是在 V5 首次生产上线前修复恢复演练阻断点，未改变原主键或历史外键；背景见 [数据库文档](docs/数据库表文档.md)。完整记录见 [本地验证](docs/开发文档.md#6-本地验证)；测试通过不等于生产或真实 Docker 控制验收。
+2026-10-09 02:10:26最新后端验证共80项，一次完整运行全部通过、0跳过；包括20项人工核对集成和六项真实隔离MySQL专项，旧采集/任务与V4/V5兼容测试保留。V6验证含原UNKNOWN历史升级、不同父列排序规则、真实库并发租约与迟到owner拒绝；核对覆盖丢回包恢复、原历史不变、权威锁、同键续办、错误身份/时间/哈希拒绝和权限。02:11:26离线跳测打包成功。完整记录见[本地验证](docs/开发文档.md#6-本地验证)，测试通过不等于已部署生产或真实Docker核对验收。

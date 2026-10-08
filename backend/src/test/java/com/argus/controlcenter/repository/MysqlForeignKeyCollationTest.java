@@ -31,7 +31,7 @@ class MysqlForeignKeyCollationTest {
         List<Map<String,Object>> columns=jdbc.queryForList("SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME,ORDINAL_POSITION");
         List<Map<String,Object>> tasks=jdbc.queryForList("SELECT * FROM tasks ORDER BY id");
         List<Map<String,Object>> events=jdbc.queryForList("SELECT * FROM task_events ORDER BY task_id,event_sequence");
-        Flyway flyway=Flyway.configure().dataSource(source).load();
+        Flyway flyway=Flyway.configure().dataSource(source).target("5").load();
         flyway.validate();
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank")).isEqualTo(history);

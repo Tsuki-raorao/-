@@ -1,6 +1,6 @@
 # Argus 接口约定
 
-更新：2026-10-09。以下为当前源码契约；中央、网页与两台 Agent 已只读上线，双节点共 8 个当前 Docker 实例、日志与浏览器验收通过，生产业务控制关闭。最新状态见 [开发进度](开发进度.md)。控制中心使用统一外壳 `{ "code": 0, "message": "ok", "data": ... }`，Agent 原生接口不使用此外壳。
+更新：2026-10-09。以下为当前源码契约，包含本轮尚未部署的 V6 人工核对。生产仍为此前 V5 只读版本，双节点 8 个 Docker 实例、日志与浏览器验收通过，业务控制关闭。最新验收/部署状态见 [开发进度](开发进度.md)。控制中心使用统一外壳 `{ "code": 0, "message": "ok", "data": ... }`，Agent 原生接口不使用此外壳。
 
 ## 控制中心
 
@@ -19,6 +19,11 @@
 | POST | `/api/instances/{id}/actions` | UUID `Idempotency-Key`；`{"action":"RESTART","expectedExecutionMode":"MOCK"}` | START/STOP/RESTART，模式 MOCK/DOCKER；首次与幂等重查均 202 返回 Task，只表示接收 |
 | GET | `/api/tasks`、`/api/tasks/{id}` | 任务 ID | 列表返回最近 100 条，详情按 ID 查询持久记录 |
 | GET | `/api/tasks/{id}/events` | 任务 ID | 按 sequence 升序查询持久事件 |
+| GET | `/api/tasks/{id}/review-capabilities` | 原中央任务 ID | 独立核对权限、新建/续办能力、原任务实际互斥归属 |
+| GET | `/api/tasks/{id}/review-evidence` | 原中央任务 ID | 确认前只读证据：原 Agent 记录、绑定、执行器/进程与互斥条件；失败明确分类，不执行容器观察动作 |
+| POST | `/api/tasks/{id}/resolutions` | 独立 UUID `Idempotency-Key` 与五字段核对正文 | 新建、同请求查询、BLOCKED 原请求续办均 202；只表示持久接受，不代表解锁 |
+| GET | `/api/tasks/{id}/resolution` | 原中央任务 ID | 返回唯一核对记录或 null；含原 requestKey 和完整正文用于恢复 |
+| GET | `/api/task-resolutions/{id}`、`/api/task-resolutions/{id}/events` | 核对记录 ID | 独立记录及按 sequence 递增的追加事件 |
 | GET | `/api/logs` | `instanceId` 可选，`limit` 默认 100 | 保留的数据库日志摘要，与 Agent 最近日志分开 |
 
 ### 实例身份与最近日志
@@ -68,15 +73,39 @@
 
 ### 可靠任务
 
-完整协议以[可靠任务接口与恢复约定](可靠任务接口与恢复约定.md)为准。能力响应为 `controlEnabled/canControl/allowedActions/targets/reason`，targets 每项含中央 `instanceId`、`executionMode`、`allowedActions`；未知模式或读取失败不开放按钮。
+完整协议以[可靠任务接口与恢复约定](可靠任务接口与恢复约定.md)为准。能力响应为 `controlEnabled/canControl/allowedActions/targets/reason`，targets 每项含中央 `instanceId`、`executionMode`、`allowedActions`、`blockingTaskId`、`blockedReason`、`canConfirmPending`。被锁目标动作列表为空，阻塞字段显式返回 null 或原任务 ID/`INSTANCE_HAS_UNRESOLVED_TASK`；来源是全部实例锁，不限最近 100 条任务。未知模式或读取失败不开放操作。
 
-Task 保留 `id/instanceId/action/status/message/createdAt/finishedAt`，新增 `nodeId/agentInstanceId/commandId/executionMode/requestedBy/updatedAt/attempts/resultCode`。中央状态为 `PENDING/DISPATCHING/DELIVERED/RUNNING/RETRY_WAIT/SUCCEEDED/FAILED/UNKNOWN`，执行来源为 `MOCK/DOCKER/LEGACY_MOCK/UNKNOWN`。事件为 `{id,taskId,sequence,fromStatus,toStatus,actor,reason,occurredAt}`，id 为 UUID 字符串，sequence 为递增正整数。
+canControl/全局动作列表按授权能力计算，不因全部目标都有锁而丢失。已有待确认意图只有在 canConfirmPending=true、全局授权通过、当前目标身份与原模式仍一致时才能显式重送原键；如果此前未入队可能首次创建，不能静默更换请求。新动作仍要求无锁且目标动作获准。
 
-相同幂等键及相同实例/动作/预期模式返回原 Task；内容改变返回 409。同实例未决任务（含 UNKNOWN）保持互斥。网络超时后浏览器保留原键，只能重送同一请求核对，不能自动新建。已知 UNKNOWN 仅查询，人工核对与解锁接口尚未实现；旧 LEGACY_MOCK 不进入投递队列。任务成功不得修改实例观测状态。
+Task 保留 `id/instanceId/action/status/message/createdAt/finishedAt`，新增 `nodeId/agentInstanceId/commandId/executionMode/requestedBy/updatedAt/attempts/resultCode`；本轮增加 `blocksInstance:boolean` 与 `reviewSummary:{id,status,resultCode,appliedAt}|null`。中央状态为 `PENDING/DISPATCHING/DELIVERED/RUNNING/RETRY_WAIT/SUCCEEDED/FAILED/UNKNOWN`，执行来源为 `MOCK/DOCKER/LEGACY_MOCK/UNKNOWN`。事件为 `{id,taskId,sequence,fromStatus,toStatus,actor,reason,occurredAt}`，id 为 UUID 字符串，sequence 为递增正整数。
+
+相同幂等键及相同实例/动作/预期模式返回原 Task；内容改变返回 409。同实例未决任务（含 UNKNOWN）保持互斥。网络超时后浏览器保留原键，只能显式重送同一请求核对，不能自动新建。UNKNOWN 不自动重放；本轮独立人工核对见下一节。旧 LEGACY_MOCK 不进入投递队列，任务成功不得修改实例观测状态。
 
 默认 `ARGUS_TASK_CONTROL_ENABLED=false`、`ARGUS_TASK_ALLOW_DOCKER=false`，中央与 Agent 目标允许列表为空。启用需要认证、独立读取/控制令牌、网关主机白名单与 `ARGUS_AGENT_GATEWAY_ALLOW_CONTROL` 等配置；详情见本地运行与模块配置。网关原有读取接口仍保持只读，控制使用独立的受限命令通道。
 
 常见网关错误：禁用或非只读配置返回 503，白名单不允许返回 403，远端失败/日志格式错误返回 502，不存在的中央实例返回 404。以 HTTP 状态和统一外壳共同判断，不能只看 `data` 是否为空。
+
+### 独立 UNKNOWN 人工核对（V6，未部署）
+
+完整形状和处理顺序以[UNKNOWN 任务人工核对契约](UNKNOWN任务人工核对设计.md)为准。能力返回 `reviewEnabled/canReview/canRecheck/allowedDecisions/reason/blocksInstance/resolutionId`。核对使用操作令牌、独立开关及允许名单；不要求容器动作开关打开，但全局只读优先。查看者可 GET 记录，不能 POST 或续办，actor 由服务端确定。
+
+POST 固定正文：
+
+```json
+{
+  "decision": "ACKNOWLEDGE_UNCERTAINTY",
+  "reason": "<核对原因>",
+  "evidence": "<已检查的状态、日志和人工依据>",
+  "acknowledgeNoReplay": true,
+  "acknowledgeResidualRisk": true
+}
+```
+
+拒绝未知字段；reason/evidence 非空且最多 500/4000 个 Unicode 码点，CRLF/CR 转 LF，首尾按 ECMAScript trim 集合标准化，拒绝 NUL/未配对字符，之后正文不可改。幂等键必须标准小写连字符 UUID。同键不同任务或正文为 409 `REVIEW_IDEMPOTENCY_CONFLICT`；同任务新键为 409 `TASK_ALREADY_HAS_RESOLUTION`，应 GET 并继续已有记录。
+
+Resolution 返回身份、原 requestKey/完整正文、独立 `status/resultCode/attempts/requestedBy/createdAt/updatedAt/appliedAt` 与 `agentEvidence`。状态为 PENDING/PROCESSING/RETRY_WAIT/BLOCKED/APPLIED；BLOCKED 可 POST 原键原正文续办，不生成新的核对 ID 或命令。202 仅接受，APPLIED 表示有效回执和原锁条件删除已同事务提交。原 Task UNKNOWN、原结果和事件均保留，不能把核对当成成功、失败或新命令。Agent 原终态及本次观察单列为证据，实例观测仍由采集更新。
+
+确认前证据含中央任务/实例/节点/局部 ID/原 commandId、checkedAt、bindingMatches、classification/reason/canAcknowledge、agentTask、workerActive/knownProcessesActive、lockDisposition/processAssessment。分类包括 READY、EXECUTOR_ACTIVE、RECORD_MISSING、BINDING_CHANGED、UNAVAILABLE、INELIGIBLE、INVALID_EVIDENCE、REVIEW_DISABLED；未知值为 null。原 Agent 13 字段中的 taskId 等于 commandId，Agent 自报 nodeId 与中央 nodeId 是不同命名空间，由后端验证原绑定。前端首次提交必须先成功读取同任务证据且 canAcknowledge=true；该值不是授权票据，处理时再次验证。
 
 ## 只读 Agent 网关
 
@@ -96,12 +125,15 @@ Task 保留 `id/instanceId/action/status/message/createdAt/finishedAt`，新增 
 
 | 方法 | 路径 | 行为 |
 |---|---|---|
-| GET | `/api/agent/health` | 采集协议 1.1，另含 taskProtocolVersion=1.0、storeId、executionMode、controlEnabled |
+| GET | `/api/agent/health` | 采集协议 1.1、taskProtocolVersion=1.0、storeId、executionMode、controlEnabled；本轮另加 reviewProtocolVersion=1.0、reviewEnabled |
 | POST | `/api/agent/register`、`/api/agent/heartbeat` | 应答请求，不主动连接控制中心 |
 | GET | `/api/agent/instances` | 原生实例 JSON 数组，包含 `instanceId` 和采集元数据 |
 | GET | `/api/agent/instances/{instanceId}/logs?limit=100` | 原生字符串数组，读取已允许实例的最近日志 |
 | POST | `/api/agent/tasks` | 七字段固定命令；首次持久接收 202，同命令同请求 200，冲突 409；控制默认关闭 |
 | GET | `/api/agent/tasks/{commandId}` | 使用控制令牌查询持久记录，taskId 等于 commandId，不存在明确 404 |
+| GET | `/api/agent/tasks/{commandId}/review-evidence` | 控制令牌读取原任务与执行器/互斥证据，不执行新动作 |
+| POST | `/api/agent/tasks/{commandId}/resolutions` | 独立核对开关/名单；首次持久 CLOSED 回执 201，同核对同完整请求 200，冲突或执行未静止 409 |
+| GET | `/api/agent/tasks/{commandId}/resolutions/{resolutionId}` | 控制令牌查询持久闭合回执，开关关闭也可读取，不存在 404 |
 | GET | `/metrics` | Prometheus 文本，只读取主机快照，不调用 Docker |
 
 Agent 主机来源为 HOST；容器来源为 DOCKER 或 MOCK。可空主机字段为 `hostCpuPercent/hostMemoryBytes/hostMemoryTotalBytes/hostMemoryPercent`；实例使用 `cpuPercent/memoryBytes/players`，其中玩家数目前为 null。`checkedAt` 兼容保留，与 `sampledAt` 取同一次采样时间。

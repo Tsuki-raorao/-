@@ -4,6 +4,7 @@ import com.argus.agent.AgentConfig;
 import com.argus.agent.command.CommandFailure;
 import com.argus.agent.command.CommandRunner;
 import com.argus.agent.command.ProcessCommandRunner;
+import com.argus.agent.command.ExecutionRegistry;
 import com.argus.agent.model.InstanceStatus;
 
 import java.time.Instant;
@@ -20,10 +21,16 @@ public final class InstanceService {
     private static final Pattern MEMORY = Pattern.compile("(?i)^([0-9]+(?:\\.[0-9]+)?)\\s*([kmgt]?i?b)?$");
     private final AgentConfig config;
     private final CommandRunner runner;
+    private final ExecutionRegistry executions;
     private final Map<String, String> mockStates = new java.util.concurrent.ConcurrentHashMap<>();
 
     public InstanceService(AgentConfig config) { this(config, new ProcessCommandRunner()); }
-    public InstanceService(AgentConfig config, CommandRunner runner) { this.config = config; this.runner = runner; }
+    public InstanceService(AgentConfig config, CommandRunner runner) {
+        this.config = config; this.runner = runner;
+        ExecutionRegistry provided = runner.executionRegistry();
+        this.executions = provided == null ? new ExecutionRegistry() : provided;
+    }
+    public ExecutionRegistry executionRegistry() { return executions; }
 
     public List<InstanceStatus> list() {
         if (config.mock() || !config.discoveryEnabled()) return List.of(status(config.defaultInstanceId()));

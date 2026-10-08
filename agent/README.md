@@ -39,6 +39,8 @@ java -cp out com.argus.agent.AgentApplication --config=config/agent.properties
 | `ARGUS_AGENT_CONTROL_ENABLED` | 是否允许创建执行任务，默认关闭 |
 | `ARGUS_AGENT_CONTROL_TOKEN` | 独立控制令牌，必须与读取令牌不同；POST/GET tasks 使用它 |
 | `ARGUS_AGENT_CONTROL_INSTANCES` | 允许控制的 Agent 局部 ID，逗号分隔；自动发现不授予控制权 |
+| `ARGUS_AGENT_REVIEW_ENABLED` | 是否允许人工核对旧任务，默认 false；与动作控制开关独立 |
+| `ARGUS_AGENT_REVIEW_INSTANCES` | 可人工核对的局部实例 ID 精确名单；默认空，不能自动继承发现清单 |
 | `ARGUS_AGENT_TASK_DIR` | 持久 Inbox 目录，默认 `agent/data/task-inbox` |
 | `ARGUS_AGENT_TASK_MAX_RECORDS` | Inbox 记录容量，默认 10000；满后拒绝新命令，原命令仍可查询 |
 | `ARGUS_AGENT_MAX_TASKS` | 并发任务上限 |
@@ -85,6 +87,9 @@ java -cp out com.argus.agent.AgentApplication --config=config/agent.properties
 | GET | `/api/agent/instances/{instanceId}/logs?limit=100` | 读取已允许实例的最近日志 |
 | POST | `/api/agent/tasks` | 控制令牌、开关与允许列表通过后，持久接收七字段命令 |
 | GET | `/api/agent/tasks/{commandId}` | 用控制令牌查询持久结果；关闭控制后仍可查询 |
+| GET | `/api/agent/tasks/{commandId}/review-evidence` | 用控制令牌读取原任务、锁归属与本进程执行资源事实，不运行 Docker 观察 |
+| POST | `/api/agent/tasks/{commandId}/resolutions` | 独立 review 开关/名单授权后持久保存人工核对回执；不重放原动作 |
+| GET | `/api/agent/tasks/{commandId}/resolutions/{resolutionId}` | 查询固定回执；关闭 review 后仍可查询 |
 
 配置令牌后读取接口要求 `Authorization: Bearer <read-token>`；任务 POST/GET 要求独立控制令牌，控制令牌也可读取。不接受查询参数传递令牌。纯只读 mock 模式可不配置令牌；一旦开放控制，mock 也要求两个非空且不同的令牌和明确允许列表。指标包含 `argus_agent_up`、`argus_agent_info`、`argus_host_cpu_percent`、`argus_host_memory_bytes`、`argus_host_memory_total_bytes`、`argus_host_memory_percent`；不可用数值直接省略。`argus_host_metrics_available` 表示基础指标是否全部可用，`argus_host_cpu_available` 和 `argus_host_memory_available` 分别指示可用性，0 是明确的采集状态而非伪造的资源值。`/metrics` 不执行 Docker 命令。
 
@@ -94,7 +99,11 @@ java -cp out com.argus.agent.AgentApplication --config=config/agent.properties
 
 HTTP 使用固定工作线程和有界等待队列。满队列采用 `CallerRunsPolicy`：JDK 调度线程执行一项请求，给接收端施加背压；实际处理线程最多为配置工作线程数加一个调度线程。它不是 HTTP 429 限流，也不能消除慢客户端或慢任务占用线程的问题；连接层的超时与速率控制仍需反向代理等外层措施。关闭时先停止 HTTP 服务、关闭连接，再关闭执行器，不能靠静默丢弃请求实现拒绝。
 
-任务现有持久 Inbox：中央 UUID 为任务 ID，相同七字段请求返回原结果，冲突返回 409。PENDING 落盘后才确认接收，RUNNING 落盘后才执行；执行后核验实例状态。重启发现 RUNNING 则改为 UNKNOWN，不自动重放，UNKNOWN 持续占用该实例的控制互斥。MOCK 的 stop/start/restart 会改变进程内模拟状态并核验，但不会控制真实 Docker。完整协议、磁盘格式和恢复边界见 [持久任务 Inbox](docs/持久任务Inbox.md)。
+任务现有持久 Inbox：中央 UUID 为任务 ID，相同七字段请求返回原结果，冲突返回 409。PENDING 落盘后才确认接收，RUNNING 落盘后才执行；执行后核验实例状态。重启发现 RUNNING 则改为 UNKNOWN，不自动重放，UNKNOWN 持续占用该实例的控制互斥。独立人工核对通过后只保存 CLOSED 回执并条件解除原锁，原 UNKNOWN 记录永不改成成功；旧 command 重试仍返回原记录。MOCK 的 stop/start/restart 会改变进程内模拟状态并核验，但不会控制真实 Docker。完整协议、磁盘格式和恢复边界见 [持久任务 Inbox](docs/持久任务Inbox.md) 与 [人工核对回执](docs/人工核对回执.md)。
+
+核对 health 增加 `reviewProtocolVersion="1.0"`、`reviewEnabled`；采集协议 1.1 和任务协议 1.0 保持不变。`controlEnabled` 与已有 `readOnly` 字段仍描述动作执行开关，不能用它们推断核对授权；例如 control=false、review=true 时只能按独立规则核对旧任务，仍不能 start/stop/restart。开启 review 同样必须配置不同的读取/控制令牌与精确核对名单，即使使用 MOCK。核对始终使用控制令牌，默认配置没有新增写权限。
+
+核对首次提交前检查原 worker、命令作用域、已知子进程及输出读取线程；当前观察之后再检查一次。限时 kill/等待不是退出证明，仍存活或清理无法确认时为 `review_executor_active`，原锁保留。`CURRENT_PROCESS_CLEARED` 只表示本进程已知资源清理完成；重启恢复旧任务只能报告 `PRIOR_PROCESS_UNVERIFIED`。Docker daemon 在 CLI 退出后仍可能继续动作，必须由人工核对并明确接受这一风险，不能把当前容器状态当成原任务成功证据。
 
 真实只读采集与远程动作是不同开关。当前部署应保持 `control.enabled=false`，Agent 只允许控制中心或受控管理来源访问。Docker 访问权限本身具有较高影响范围，需要按运行环境单独限制。
 
@@ -120,3 +129,5 @@ Invoke-RestMethod http://localhost:8090/api/agent/instances
 2026-10-08 本地验证：23 项原测试与 21 项 Inbox 测试通过，0 失败，独立 JSON 解析通过。新增期限测试以受控时钟模拟 RUNNING 持久化、执行入口容器发现期间过期，验证动作次数均为零。Docker 结果与动作使用注入模拟或 MOCK，子进程仅为测试 Java 程序；这不等于真实 Docker、远程服务器、负载或断电恢复验收。主动通信、业务 Adapter 注册及完整用户/项目权限仍未实现；跨模块验收以根目录进度文档为准。
 
 2026-10-09 监听配置增量验收：27 项基础测试 + 21 项 Inbox 测试共 48 项全部通过，两个独立 JSON 检查通过。新增检查验证配置优先级及显式空值拒绝、实际 socket 只绑定 loopback 且日志一致、端口占用失败后 Inbox 能立即重开，以及 HTTP 初始化失败后端口和 Inbox 均不残留。执行器在端口绑定前构造，避免 JDK 未启动 HttpServer 的 stop 无法可靠释放已绑定端口。此轮未连接远程服务器或执行真实 Docker。
+
+2026-10-09 人工核对增量：保留上述 48 项，新增 5 项执行资源登记与 36 项核对测试，总计 89 项；结果以本轮脚本实际输出为准。覆盖两项 boolean 确认的严格类型、中文/换行/emoji 跨语言 hash、原任务文件字节保持、并发同请求、容量、坏盘/坏回执、真实 Java 崩溃前后恢复、旧回执与新任务锁、当前 worker/helper/reader、观察自身残留进程、独立开关与令牌、回执时间矛盾，以及关闭时等待核对观察退出。另有三组独立 JSON 检查。所有增量测试使用本机模拟执行与自建 Java 进程，不能据此宣称新核对模块已在生产开放。

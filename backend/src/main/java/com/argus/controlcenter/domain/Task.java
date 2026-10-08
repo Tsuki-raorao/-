@@ -26,6 +26,8 @@ public class Task {
     private Instant updatedAt;
     private int attempts;
     private String resultCode;
+    private boolean blocksInstance;
+    private TaskResolution.Summary reviewSummary;
 
     public Task() { }
     public Task(String id, String instanceId, String action, TaskStatus status, String message, Instant createdAt, Instant finishedAt) {
@@ -61,4 +63,8 @@ public class Task {
     public void setAttempts(int value) { attempts = value; }
     public String getResultCode() { return resultCode; }
     public void setResultCode(String value) { resultCode = value; }
+    public boolean isBlocksInstance() { return blocksInstance; }
+    public void setBlocksInstance(boolean value) { blocksInstance=value; }
+    public TaskResolution.Summary getReviewSummary() { return reviewSummary; }
+    public void setReviewSummary(TaskResolution.Summary value) { reviewSummary=value; }
 }

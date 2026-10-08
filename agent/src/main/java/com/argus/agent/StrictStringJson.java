@@ -2,12 +2,16 @@ package com.argus.agent;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /** 任务只需要字符串/null 对象，必须完整解析而非正则抽取。 */
 final class StrictStringJson {
     private final String input; private int index;
-    private StrictStringJson(String input) { this.input = input == null ? "" : input; }
+    private final Set<String> booleanFields;
+    private StrictStringJson(String input) { this(input, Set.of()); }
+    private StrictStringJson(String input, Set<String> booleanFields) { this.input = input == null ? "" : input; this.booleanFields = booleanFields; }
     static Map<String, String> parse(String input) { return new StrictStringJson(input).object(); }
+    static Map<String, String> parse(String input, Set<String> booleanFields) { return new StrictStringJson(input, booleanFields).object(); }
     private Map<String, String> object() {
         Map<String, String> values = new LinkedHashMap<>();
         space(); expect('{'); space();
@@ -15,7 +19,12 @@ final class StrictStringJson {
         while (true) {
             space(); String key = string(); space(); expect(':'); space();
             String value;
-            if (input.startsWith("null", index)) { index += 4; value = null; }
+            if (booleanFields.contains(key)) {
+                if (input.startsWith("true", index)) { index += 4; value = "true"; }
+                else if (input.startsWith("false", index)) { index += 5; value = "false"; }
+                else throw invalid();
+            }
+            else if (input.startsWith("null", index)) { index += 4; value = null; }
             else value = string();
             if (values.containsKey(key)) throw invalid();
             values.put(key, value); space();

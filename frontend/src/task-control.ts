@@ -1,6 +1,6 @@
 import { type Task, type TaskAction, type ExecutionMode } from './models'
 
-export interface ControlTarget { instanceId: string; executionMode: 'MOCK' | 'DOCKER'; allowedActions: TaskAction[] }
+export interface ControlTarget { instanceId: string; executionMode: 'MOCK' | 'DOCKER'; allowedActions: TaskAction[]; blockingTaskId: string | null; blockedReason: string | null; canConfirmPending: boolean }
 export interface Capabilities { controlEnabled: boolean; canControl: boolean; allowedActions: TaskAction[]; targets: ControlTarget[]; reason: string }
 export const disabledCapabilities = (reason = '操作权限尚未验证'): Capabilities => ({ controlEnabled: false, canControl: false, allowedActions: [], targets: [], reason })
 const actions = (value: unknown): TaskAction[] => Array.isArray(value) ? ['START', 'STOP', 'RESTART'].filter(action => value.includes(action)) as TaskAction[] : []
@@ -11,7 +11,8 @@ const capabilityReason = (value: unknown): string => ({
 export function normalizeCapabilities(input: unknown): Capabilities {
   if (!input || typeof input !== 'object') return disabledCapabilities('操作能力响应无效')
   const x = input as Record<string, unknown>
-  if (x.controlEnabled !== true || x.canControl !== true || !Array.isArray(x.targets)) return disabledCapabilities(capabilityReason(x.reason))
+  if (!Array.isArray(x.targets)) return disabledCapabilities(capabilityReason(x.reason))
+  const authorized = x.controlEnabled === true && x.canControl === true
   const seen = new Set<string>()
   const targets: ControlTarget[] = []
   for (const item of x.targets) {
@@ -19,13 +20,17 @@ export function normalizeCapabilities(input: unknown): Capabilities {
     const t = item as Record<string, unknown>
     if (typeof t.instanceId !== 'string' || !t.instanceId || seen.has(t.instanceId)) return disabledCapabilities('操作目标身份无效')
     seen.add(t.instanceId)
-    if (t.executionMode === 'MOCK' || t.executionMode === 'DOCKER') targets.push({ instanceId: t.instanceId, executionMode: t.executionMode, allowedActions: actions(t.allowedActions) })
+    if (t.blockingTaskId !== null && (typeof t.blockingTaskId !== 'string' || !t.blockingTaskId)) return disabledCapabilities('实例互斥状态未验证')
+    if (t.blockingTaskId ? t.blockedReason !== 'INSTANCE_HAS_UNRESOLVED_TASK' : t.blockedReason !== null) return disabledCapabilities('实例互斥状态无效')
+    if (t.executionMode === 'MOCK' || t.executionMode === 'DOCKER') targets.push({ instanceId: t.instanceId, executionMode: t.executionMode,
+      allowedActions: !authorized || t.blockingTaskId ? [] : actions(t.allowedActions), blockingTaskId: t.blockingTaskId as string | null, blockedReason: t.blockedReason as string | null,
+      canConfirmPending: authorized && t.canConfirmPending === true })
   }
-  return { controlEnabled: true, canControl: true, allowedActions: actions(x.allowedActions), targets, reason: capabilityReason(x.reason) }
+  return { controlEnabled: x.controlEnabled === true, canControl: authorized, allowedActions: authorized ? actions(x.allowedActions) : [], targets, reason: capabilityReason(x.reason) }
 }
 export function allowedTarget(capabilities: Capabilities, instanceId: string, action: TaskAction): ControlTarget | undefined {
   if (!capabilities.controlEnabled || !capabilities.canControl || !capabilities.allowedActions.includes(action)) return undefined
-  return capabilities.targets.find(target => target.instanceId === instanceId && target.allowedActions.includes(action))
+  return capabilities.targets.find(target => target.instanceId === instanceId && target.blockingTaskId === null && target.allowedActions.includes(action))
 }
 
 export interface ActionIntent { key: string; instanceId: string; nodeId: string; agentInstanceId: string; name: string; action: TaskAction; expectedExecutionMode: Extract<ExecutionMode, 'MOCK' | 'DOCKER'> }

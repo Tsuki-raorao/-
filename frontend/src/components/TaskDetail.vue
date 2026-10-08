@@ -13,7 +13,7 @@ defineEmits<{ refresh: []; close: [] }>()
     <template v-else-if="state.task">
       <div class="task-detail-body">
         <p :class="['data-banner', state.task.executionMode === 'DOCKER' ? '' : 'mock']">{{ executionLabel(state.task.executionMode) }} · {{ taskResultLabel(state.task) }}。任务结果不会改写实例观测状态。</p>
-        <p v-if="state.task.status === 'UNKNOWN'" class="data-banner error" role="alert">结果不确定，需要核对 Agent 与容器。禁止自动重新执行；当前页面只查询，不提供解除互斥或重做操作。</p>
+        <p v-if="state.task.status === 'UNKNOWN'" class="data-banner error" role="alert">原执行结果不确定，禁止自动重新执行。人工核对使用下方独立记录；即使核对已应用，原 UNKNOWN 与原事件仍然保留。</p>
         <dl class="task-facts">
           <div><dt>操作 / 发起人</dt><dd>{{ actionLabel(state.task.action) }} / {{ state.task.requestedBy }}</dd></div>
           <div><dt>所属节点</dt><dd>{{ state.task.nodeId || '未记录' }}</dd></div>

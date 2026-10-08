@@ -7,6 +7,9 @@ import com.argus.agent.service.InstanceService;
 import com.argus.agent.service.TaskService;
 import com.argus.agent.service.TaskRejected;
 import com.argus.agent.model.TaskCommand;
+import com.argus.agent.model.ResolutionRequest;
+import com.argus.agent.model.ResolutionReceipt;
+import com.argus.agent.model.ReviewEvidence;
 import com.argus.agent.command.CommandFailure;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -88,6 +91,7 @@ public final class AgentServer implements AutoCloseable {
                 send(exchange, 200, Json.object("status", "ONLINE", "nodeId", config.nodeId(), "version", "0.1.0", "startedAt", startedAt,
                         "protocolVersion", "1.1", "dataSource", "HOST", "sampledAt", Instant.now().toString(), "metricsStatus", metrics.metricsStatus(),
                         "taskProtocolVersion", "1.0", "storeId", tasks.storeId(), "executionMode", tasks.executionMode(), "controlEnabled", tasks.controlEnabled(),
+                        "reviewProtocolVersion", "1.0", "reviewEnabled", tasks.reviewEnabled(),
                         "readOnly", !tasks.controlEnabled(), "hostCpuPercent", metrics.cpuPercent(),
                         "hostMemoryBytes", metrics.memoryBytes(), "hostMemoryTotalBytes", metrics.memoryTotalBytes(),
                         "hostMemoryPercent", metrics.memoryPercent(), "capabilities", capabilities())); return;
@@ -100,7 +104,25 @@ public final class AgentServer implements AutoCloseable {
                 if (!config.controlEnabled()) { send(exchange, 403, Json.object("error", "control_disabled", "message", "remote control is disabled by configuration")); return; }
                 createTask(exchange); return;
             }
-            if (path.startsWith("/api/agent/tasks/") && method.equals("GET")) { task(exchange, path.substring("/api/agent/tasks/".length())); return; }
+            if (path.startsWith("/api/agent/tasks/")) {
+                String[] pieces = path.substring("/api/agent/tasks/".length()).split("/", -1);
+                // 子路由优先于旧任务 GET；所有这些接口都已走独立控制令牌验证。
+                if (pieces.length == 2 && pieces[1].equals("review-evidence") && method.equals("GET")) {
+                    ReviewEvidence evidence = tasks.reviewEvidence(pieces[0]);
+                    if (evidence == null) send(exchange, 404, Json.object("error", "task_not_found")); else send(exchange, 200, evidence.json());
+                    return;
+                }
+                if (pieces.length == 2 && pieces[1].equals("resolutions") && method.equals("POST")) {
+                    TaskService.ResolutionSubmission result = tasks.resolve(ResolutionRequest.parse(pieces[0], read(exchange)));
+                    send(exchange, result.created() ? 201 : 200, result.receipt().json()); return;
+                }
+                if (pieces.length == 3 && pieces[1].equals("resolutions") && method.equals("GET")) {
+                    ResolutionReceipt receipt = tasks.resolution(pieces[0], pieces[2]);
+                    if (receipt == null) send(exchange, 404, Json.object("error", "resolution_not_found")); else send(exchange, 200, receipt.json());
+                    return;
+                }
+                if (pieces.length == 1 && method.equals("GET")) { task(exchange, pieces[0]); return; }
+            }
             if (path.startsWith("/api/agent/instances/") && path.endsWith("/logs") && method.equals("GET")) { logs(exchange, path); return; }
             send(exchange, 404, Json.object("error", "not_found"));
         } catch (TaskRejected e) {
@@ -152,7 +174,7 @@ public final class AgentServer implements AutoCloseable {
     private Json.Raw capabilities() { return Json.raw("[\"read_health\",\"read_instances\",\"read_logs\",\"read_metrics\"]"); }
     private String instancesJson(List<InstanceStatus> values) { List<String> json = new ArrayList<>(); for (InstanceStatus x : values) json.add(instanceJson(x)); return "[" + String.join(",", json) + "]"; }
     private String instanceJson(InstanceStatus x) { return Json.object("instanceId", x.instanceId(), "name", x.name(), "container", x.container(), "status", x.status(), "cpuPercent", x.cpuPercent(), "memoryBytes", x.memoryBytes(), "players", x.players(), "checkedAt", x.checkedAt(), "dataSource", x.dataSource(), "sampledAt", x.sampledAt(), "metricsStatus", x.metricsStatus()); }
-    private String taskJson(TaskView x) { return Json.object("taskId", x.taskId(), "instanceId", x.instanceId(), "action", x.action(), "status", x.status(), "message", x.message(), "createdAt", x.createdAt(), "startedAt", x.startedAt(), "finishedAt", x.finishedAt(), "executionMode", x.executionMode(), "nodeId", x.nodeId(), "storeId", x.storeId(), "resultCode", x.resultCode(), "observedStatus", x.observedStatus()); }
+    private String taskJson(TaskView x) { return x.json(); }
     private int query(URI uri, String key, int fallback) { String raw = uri.getRawQuery(); if (raw == null) return fallback; for (String p : raw.split("&")) { String[] kv = p.split("=", 2); if (kv.length == 2 && kv[0].equals(key)) try { return Integer.parseInt(kv[1]); } catch (NumberFormatException ignored) { } } return fallback; }
     private void send(HttpExchange e, int code, String body) throws IOException { byte[] bytes = body.getBytes(StandardCharsets.UTF_8); e.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8"); e.sendResponseHeaders(code, bytes.length); try (var out = e.getResponseBody()) { out.write(bytes); } }
     /** 输出 Prometheus 0.0.4 文本格式；接口仍复用 Agent 令牌认证，不额外开放端口。 */

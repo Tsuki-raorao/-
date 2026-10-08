@@ -5,7 +5,7 @@ spring:
     scheduling:
       # 单个任务 worker 有界顺序执行，独立余量避免慢控制请求阻塞原有采集。
       pool:
-        size: 2
+        size: 3
   application:
     name: argus-control-center
   datasource:
@@ -17,6 +17,14 @@ spring:
     enabled: true
     locations: classpath:db/migration
 argus:
+  task-review:
+    enabled: ${ARGUS_TASK_REVIEW_ENABLED:false}
+    allowed-instance-ids: ${ARGUS_TASK_REVIEW_ALLOWED_INSTANCE_IDS:}
+    lease: ${ARGUS_TASK_REVIEW_LEASE:60s}
+    retry-delay: ${ARGUS_TASK_REVIEW_RETRY_DELAY:3s}
+    max-attempts: ${ARGUS_TASK_REVIEW_MAX_ATTEMPTS:5}
+    poll-interval-ms: ${ARGUS_TASK_REVIEW_POLL_INTERVAL_MS:1000}
+    initial-delay-ms: ${ARGUS_TASK_REVIEW_INITIAL_DELAY_MS:5000}
   security:
     # 生产先保持只读，完成登录/权限/审计后再关闭；本地默认 false。
     read-only: ${ARGUS_API_READ_ONLY:false}

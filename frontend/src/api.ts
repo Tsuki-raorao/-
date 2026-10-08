@@ -1,5 +1,7 @@
 import { normalizeAgentLogs, normalizeInstance, normalizeNode, normalizeTask, normalizeTaskEvents, type AgentLogs, type HealthState } from './models'
 import { normalizeCapabilities, type ActionIntent } from './task-control'
+import { normalizeResolution, normalizeResolutionEvents, normalizeReviewCapabilities, normalizeReviewEvidence, type ReviewIntent } from './task-resolution'
+import type { Task } from './models'
 export type { Instance, NodeItem, Task, AgentLogs, HealthState } from './models'
 
 interface ApiEnvelope<T> { code?: number; message?: string; data?: T }
@@ -64,6 +66,19 @@ export const api = {
   },
   taskEvents: async (id: string, signal?: AbortSignal) => normalizeTaskEvents(await request<unknown>(`/tasks/${encodeURIComponent(id)}/events`, { signal }), id),
   capabilities: async () => normalizeCapabilities(await request<unknown>('/control/capabilities')),
+  reviewCapabilities: async (id: string, signal?: AbortSignal) => normalizeReviewCapabilities(await request<unknown>(`/tasks/${encodeURIComponent(id)}/review-capabilities`, { signal })),
+  reviewEvidence: async (task: Task, signal?: AbortSignal) => normalizeReviewEvidence(await request<unknown>(`/tasks/${encodeURIComponent(task.id)}/review-evidence`, { signal }), task),
+  taskResolution: async (id: string, signal?: AbortSignal) => {
+    const value = await request<unknown>(`/tasks/${encodeURIComponent(id)}/resolution`, { signal })
+    if (value === null) return null
+    const result = normalizeResolution(value)
+    if (result.taskId !== id) throw new ApiRequestError('核对记录不属于所选任务')
+    return result
+  },
+  resolutionEvents: async (id: string, signal?: AbortSignal) => normalizeResolutionEvents(await request<unknown>(`/task-resolutions/${encodeURIComponent(id)}/events`, { signal }), id),
+  resolveTask: async (intent: ReviewIntent, signal?: AbortSignal) => normalizeResolution(await request<unknown>(`/tasks/${encodeURIComponent(intent.taskId)}/resolutions`, {
+    method: 'POST', signal, headers: { 'Idempotency-Key': intent.key }, body: JSON.stringify(intent.body)
+  }, 202)),
   recentLogs: async (id: string, signal?: AbortSignal): Promise<AgentLogs> => {
     if (!id) throw new ApiRequestError('请先选择实例')
     return normalizeAgentLogs(await request<unknown>(`/instances/${encodeURIComponent(id)}/logs?limit=100`, { signal }), id)
