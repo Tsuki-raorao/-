@@ -44,6 +44,8 @@ target/
 .tools/
 .gradle/
 .idea/
+.run/
+*.iml
 .vscode/
 .DS_Store
 Thumbs.db

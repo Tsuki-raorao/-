@@ -33,7 +33,11 @@ java -jar target/argus-control-center-0.1.0-SNAPSHOT.jar
 java -jar target/argus-control-center-0.1.0-SNAPSHOT.jar --spring.profiles.active=mysql
 ```
 
-运行前通过环境变量设置 `MYSQL_HOST`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD`。默认主机是本机回环地址，密码没有默认真实值；配置见 `src/main/resources/application-mysql.yml`。生产凭据由部署环境提供，不写入仓库。
+运行前通过环境变量设置 `MYSQL_HOST`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD`，四项均为必填占位符；`MYSQL_PORT` 默认 `3306`。配置见 `src/main/resources/application-mysql.yml`，不要将占位符替换成真实值。
+
+IDEA 中导入本目录的 `pom.xml`，使用 JDK 17，在 `Run → Edit Configurations` 创建 `Application` 或 `Spring Boot` 配置：启动类 `com.argus.controlcenter.ArgusControlCenterApplication`，模块 `argus-control-center`，工作目录为本目录。在环境变量中配置 `SPRING_PROFILES_ACTIVE=mysql` 和 `MYSQL_*`；不要勾选 `Store as project file`。详细步骤见 [数据库接入](../docs/数据库接入.md)。
+
+本地与 Git 保持同一份源码，真实连接只保存在个人运行配置或部署环境。自动化测试使用 H2 内存库与本机 mock 服务，不复用 MySQL 运行配置；测试通过不能替代在独立测试库进行真实 MySQL 验证。
 
 ## 接口
 
