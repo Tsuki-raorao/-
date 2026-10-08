@@ -44,7 +44,7 @@ class MigrationCompatibilityTest {
         jdbc.update("INSERT INTO instances(id,name,node_id,container_name,version,status,updated_at,cpu_percent) VALUES ('mc01','old','node-old','mc01','old','RUNNING',CURRENT_TIMESTAMP,34)");
         jdbc.update("INSERT INTO tasks(id,instance_id,action,status,created_at) VALUES ('task-old','mc01','START','SUCCEEDED',CURRENT_TIMESTAMP)");
         jdbc.update("INSERT INTO logs(id,instance_id,log_timestamp,level,message) VALUES ('log-old','mc01',CURRENT_TIMESTAMP,'INFO','historical log')");
-        Flyway latest = Flyway.configure().dataSource(source).load();
+        Flyway latest = Flyway.configure().dataSource(source).target("4").load();
         assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);
         InstanceRepository repository = new InstanceRepository(jdbc);
         Instance old = repository.findById("mc01").orElseThrow();

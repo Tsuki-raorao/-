@@ -54,10 +54,6 @@ public final class Json {
     }
     /** Parses a flat JSON object; enough for task and heartbeat request DTOs. */
     public static Map<String, String> flatObject(String body) {
-        Map<String, String> result = new LinkedHashMap<>();
-        if (body == null) return result;
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\\"([^\\\"]+)\\\"\\s*:\\s*(?:\\\"([^\\\"]*)\\\"|([^,}\\s]+))").matcher(body);
-        while (m.find()) result.put(m.group(1), m.group(2) != null ? m.group(2) : m.group(3));
-        return result;
+        return StrictStringJson.parse(body);
     }
 }

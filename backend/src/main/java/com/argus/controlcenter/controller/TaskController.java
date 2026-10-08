@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/** 任务状态查询接口；真正的任务投递和控制能力仍按只读策略关闭。 */
+/** 任务及追加事件查询；控制关闭后仍可读取已保存结果。 */
 @RestController
 @RequestMapping("/api/tasks")
 public class TaskController {
@@ -30,5 +30,9 @@ public class TaskController {
     @GetMapping("/{id}")
     public ApiResponse<Task> get(@PathVariable String id) {
         return ApiResponse.ok(service.findById(id));
+    }
+    @GetMapping("/{id}/events")
+    public ApiResponse<List<com.argus.controlcenter.domain.TaskEvent>> events(@PathVariable String id) {
+        return ApiResponse.ok(service.events(id));
     }
 }

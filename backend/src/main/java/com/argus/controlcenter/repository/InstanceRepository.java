@@ -30,6 +30,7 @@ public class InstanceRepository {
     }
     public List<Instance> findAll() { return jdbc.query("SELECT " + COLUMNS + " FROM instances ORDER BY id", this::map); }
     public Optional<Instance> findById(String id) { return jdbc.query("SELECT " + COLUMNS + " FROM instances WHERE id=?", this::map, id).stream().findFirst(); }
+    public Optional<Instance> findByIdForUpdate(String id) { return jdbc.query("SELECT " + COLUMNS + " FROM instances WHERE id=? FOR UPDATE", this::map, id).stream().findFirst(); }
     public Optional<Instance> findByNodeAndAgentId(String nodeId, String agentId) {
         return jdbc.query("SELECT " + COLUMNS + " FROM instances WHERE node_id=? AND agent_instance_id=?", this::map, nodeId, agentId).stream().findFirst();
     }

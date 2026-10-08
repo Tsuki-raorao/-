@@ -8,6 +8,10 @@ import com.argus.controlcenter.vo.InstanceLogsVO;
 import com.argus.controlcenter.service.TaskService;
 import com.argus.controlcenter.vo.ApiResponse;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
+import com.argus.controlcenter.config.ApiAccessInterceptor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -50,10 +54,12 @@ public class InstanceController {
         return ApiResponse.ok(logs.read(id, limit));
     }
 
-    /** 创建一个动作任务；是否允许执行由生产只读拦截器决定。 */
+    /** 操作令牌、只读开关及目标授权通过后持久接收任务；202 不表示执行完成。 */
     @PostMapping("/{id}/actions")
-    public ApiResponse<com.argus.controlcenter.domain.Task> action(@PathVariable String id,
-                                                                    @Valid @RequestBody ActionRequest request) {
-        return ApiResponse.created(tasks.execute(id, request.getAction()));
+    public ResponseEntity<ApiResponse<com.argus.controlcenter.domain.Task>> action(@PathVariable String id,
+            @RequestHeader(value="Idempotency-Key",required=false) String key,
+            @Valid @RequestBody ActionRequest request,HttpServletRequest http) {
+        return ResponseEntity.accepted().body(ApiResponse.ok(tasks.execute(id,request.getAction(),request.getExpectedExecutionMode(),key,
+                Boolean.TRUE.equals(http.getAttribute(ApiAccessInterceptor.OPERATOR_ATTRIBUTE)))));
     }
 }

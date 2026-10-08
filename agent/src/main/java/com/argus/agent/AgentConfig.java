@@ -6,6 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.Set;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 /** Agent 不可变配置；配置文件可选，环境变量优先覆盖文件值。 */
 public record AgentConfig(int port, String nodeId, String nodeName, String authToken,
@@ -13,7 +16,24 @@ public record AgentConfig(int port, String nodeId, String nodeName, String authT
                           String defaultContainer, int commandTimeoutSeconds,
                           int maxConcurrentTasks, int maxRequestBytes, int maxHttpThreads,
                           boolean controlEnabled, boolean discoveryEnabled, String advertisedHost,
-                          int maxCommandOutputBytes, int maxHttpQueueSize) {
+                          int maxCommandOutputBytes, int maxHttpQueueSize,
+                          String controlToken, Set<String> controlInstances, Path taskDirectory,
+                          int taskMaxRecords, boolean taskDirectoryConfigured) {
+    public AgentConfig {
+        controlInstances = Set.copyOf(controlInstances);
+        if (!controlToken.isBlank() && controlToken.equals(authToken))
+            throw new IllegalArgumentException("control token must differ from read token");
+    }
+    /** 保留既有采集测试的构造方式；只读时无意外磁盘写入。 */
+    public AgentConfig(int port, String nodeId, String nodeName, String authToken, boolean mock,
+                       String dockerExecutable, String defaultInstanceId, String defaultContainer, int commandTimeoutSeconds,
+                       int maxConcurrentTasks, int maxRequestBytes, int maxHttpThreads, boolean controlEnabled,
+                       boolean discoveryEnabled, String advertisedHost, int maxCommandOutputBytes, int maxHttpQueueSize) {
+        this(port, nodeId, nodeName, authToken, mock, dockerExecutable, defaultInstanceId, defaultContainer,
+                commandTimeoutSeconds, maxConcurrentTasks, maxRequestBytes, maxHttpThreads, controlEnabled,
+                discoveryEnabled, advertisedHost, maxCommandOutputBytes, maxHttpQueueSize, "", Set.of(),
+                Path.of("agent/data/task-inbox"), 10000, false);
+    }
     public static AgentConfig load(String[] args) throws IOException {
         Properties p = new Properties();
         String configPath = System.getenv().getOrDefault("ARGUS_AGENT_CONFIG", "agent/config/agent.properties");
@@ -35,19 +55,31 @@ public record AgentConfig(int port, String nodeId, String nodeName, String authT
         if (!mock && authToken.isBlank()) {
             throw new IllegalArgumentException("ARGUS_AGENT_AUTH_TOKEN/auth.token is required when executor.mock=false");
         }
+        boolean controlEnabled = Boolean.parseBoolean(envOr(p, "ARGUS_AGENT_CONTROL_ENABLED", "control.enabled", "false"));
+        String controlToken = envOr(p, "ARGUS_AGENT_CONTROL_TOKEN", "control.token", "");
+        Set<String> controlInstances = Arrays.stream(envOr(p, "ARGUS_AGENT_CONTROL_INSTANCES", "control.instances", "").split(","))
+                .map(String::trim).filter(value -> !value.isEmpty()).collect(Collectors.toUnmodifiableSet());
+        if (controlInstances.stream().anyMatch(value -> !value.matches("[A-Za-z0-9_.-]{1,64}"))) throw new IllegalArgumentException("invalid control instance allowlist");
+        if (controlEnabled && (authToken.isBlank() || controlToken.isBlank() || controlToken.equals(authToken) || controlInstances.isEmpty()))
+            throw new IllegalArgumentException("control requires distinct read/control tokens and instance allowlist");
+        if (!controlToken.isBlank() && controlToken.equals(authToken)) throw new IllegalArgumentException("control token must differ from read token");
+        boolean taskDirectoryConfigured = p.containsKey("task.directory") || System.getenv("ARGUS_AGENT_TASK_DIR") != null;
         return new AgentConfig(port, id, name,
                 authToken, mock,
                 envOr(p, "ARGUS_AGENT_DOCKER", "docker.executable", "docker"),
                 p.getProperty("instance.id", "mc01"), p.getProperty("instance.container", "mc01"),
                 positiveInt(p.getProperty("executor.timeout-seconds", "30"), "executor.timeout-seconds", 1, 600),
                 maxTasks, maxRequestBytes, maxHttpThreads,
-                Boolean.parseBoolean(envOr(p, "ARGUS_AGENT_CONTROL_ENABLED", "control.enabled", "false")),
+                controlEnabled,
                 Boolean.parseBoolean(envOr(p, "ARGUS_AGENT_DISCOVERY", "instance.discovery", "true")),
                 envOr(p, "ARGUS_AGENT_ADVERTISED_HOST", "node.advertised-host", ""),
                 positiveInt(envOr(p, "ARGUS_AGENT_MAX_COMMAND_OUTPUT_BYTES", "executor.max-output-bytes", "1048576"),
                         "executor.max-output-bytes", 1024, 16777216),
                 positiveInt(envOr(p, "ARGUS_AGENT_MAX_HTTP_QUEUE", "server.max-http-queue", "64"),
-                        "server.max-http-queue", 1, 1024));
+                        "server.max-http-queue", 1, 1024), controlToken, controlInstances,
+                Path.of(envOr(p, "ARGUS_AGENT_TASK_DIR", "task.directory", "agent/data/task-inbox")),
+                positiveInt(envOr(p, "ARGUS_AGENT_TASK_MAX_RECORDS", "task.max-records", "10000"), "task.max-records", 1, 100000),
+                taskDirectoryConfigured);
     }
 
     private static String envOr(Properties p, String env, String key, String fallback) {

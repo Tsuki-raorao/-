@@ -19,6 +19,13 @@ executor.max-output-bytes=1048576
 executor.max-concurrent-tasks=4
 # 远程 start/stop/restart 默认关闭；只有完成权限、审计和备份配置后才显式开启。
 control.enabled=false
+# 读取令牌与控制令牌必须不同，真实值通过环境变量注入，不写进仓库。
+control.token=
+# 控制采用独立允许列表，自动发现容器不等于获得控制权限。
+control.instances=
+# 默认仅控制开启、显式配置目录或发现既有 store.id 时打开 Inbox。
+# task.directory=agent/data/task-inbox
+task.max-records=10000
 instance.id=mc01
 instance.container=mc01
 # true 时自动读取 docker ps -a，展示节点上的全部容器；只读模式下不会执行容器动作。

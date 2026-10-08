@@ -29,4 +29,8 @@ public class GlobalExceptionHandler {
     private static final class ApiResponseBuilder<T> {
         ApiResponse<T> error(int code, String message) { return new ApiResponse<>(code, message, null); }
     }
+    @ExceptionHandler(TaskControlException.class)
+    public ResponseEntity<ApiResponse<Void>> taskControl(TaskControlException e) {
+        return ResponseEntity.status(e.getStatus()).body(new ApiResponse<>(e.getStatus(), e.getMessage(), null));
+    }
 }

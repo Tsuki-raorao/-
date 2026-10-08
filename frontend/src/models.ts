@@ -1,6 +1,8 @@
 export type NodeStatus = 'online' | 'offline'
 export type InstanceStatus = 'running' | 'stopped' | 'starting' | 'error' | 'unknown'
-export type TaskStatus = 'running' | 'success' | 'failed' | 'pending'
+export type TaskStatus = 'PENDING' | 'DISPATCHING' | 'DELIVERED' | 'RUNNING' | 'RETRY_WAIT' | 'SUCCEEDED' | 'FAILED' | 'UNKNOWN'
+export type TaskAction = 'START' | 'STOP' | 'RESTART'
+export type ExecutionMode = 'MOCK' | 'DOCKER' | 'LEGACY_MOCK' | 'UNKNOWN'
 export type MetricsStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE' | 'UNKNOWN'
 export type DataSource = 'HOST' | 'DOCKER' | 'MOCK' | 'LEGACY'
 export type SyncStatus = 'UNKNOWN' | 'OK' | 'PARTIAL' | 'FAILED'
@@ -40,7 +42,13 @@ export interface Instance extends Observation {
   uptime: string
 }
 
-export interface Task { id: string; action: string; target: string; status: TaskStatus; createdAt: string; operator: string; duration: string }
+export interface Task {
+  id: string; instanceId: string; nodeId: string; agentInstanceId: string; commandId: string
+  action: string; status: TaskStatus; executionMode: ExecutionMode; requestedBy: string
+  message: string; createdAt: string | null; updatedAt: string | null; finishedAt: string | null
+  attempts: number | null; resultCode: string | null
+}
+export interface TaskEvent { id: string; taskId: string; sequence: number; fromStatus: TaskStatus | null; toStatus: TaskStatus; actor: string; reason: string; occurredAt: string | null }
 export interface HealthState { status: string; readOnly: boolean; databaseReady?: boolean }
 export interface AgentLogs { instanceId: string; nodeId: string; agentInstanceId: string; collectedAt: string; lines: string[] }
 
@@ -96,10 +104,45 @@ export function normalizeInstance(input: unknown): Instance {
 
 export function normalizeTask(input: unknown): Task {
   const x = asRecord(input)
-  const value = String(x.status).toLowerCase()
-  const status: TaskStatus = value === 'succeeded' || value === 'success' ? 'success' : member(value, ['running', 'failed'], 'pending')
-  return { id: text(x.id), action: text(x.action, '操作'), target: text(x.target, text(x.instanceId, '—')), status,
-    createdAt: text(x.createdAt, '—'), operator: text(x.operator, '系统'), duration: text(x.duration, x.finishedAt ? '已完成' : '—') }
+  return { id: text(x.id), instanceId: text(x.instanceId), nodeId: text(x.nodeId), agentInstanceId: text(x.agentInstanceId), commandId: text(x.commandId),
+    action: text(x.action, 'UNKNOWN'), status: taskStatus(x.status), executionMode: member(x.executionMode, ['MOCK', 'DOCKER', 'LEGACY_MOCK', 'UNKNOWN'], 'UNKNOWN'),
+    requestedBy: text(x.requestedBy, '未记录'), message: text(x.message), createdAt: timestamp(x.createdAt), updatedAt: timestamp(x.updatedAt), finishedAt: timestamp(x.finishedAt),
+    attempts: Number.isInteger(x.attempts) ? measurement(x.attempts) : null, resultCode: text(x.resultCode) || null }
+}
+
+export const taskStatus = (value: unknown): TaskStatus => member(value, ['PENDING', 'DISPATCHING', 'DELIVERED', 'RUNNING', 'RETRY_WAIT', 'SUCCEEDED', 'FAILED', 'UNKNOWN'], 'UNKNOWN')
+export const taskStatusLabel = (value: TaskStatus): string => ({ PENDING: '已排队', DISPATCHING: '正在投递', DELIVERED: 'Agent 已接收', RUNNING: '执行中', RETRY_WAIT: '等待确认 / 投递', SUCCEEDED: '成功', FAILED: '失败', UNKNOWN: '结果不确定 · 需核对' })[value]
+export const executionLabel = (value: ExecutionMode): string => ({ MOCK: 'Agent 模拟', DOCKER: '真实 Docker', LEGACY_MOCK: '历史数据库模拟', UNKNOWN: '执行来源未验证' })[value]
+export function taskMessageLabel(value: string): string {
+  const labels: Record<string, string> = {
+    ACCEPTED: '任务已接收并排队', DISPATCHING: '控制中心正在投递或核对任务', EXECUTING: 'Agent 正在执行',
+    STATE_CONFIRMED: 'Agent 已核验容器生命周期状态；应用业务是否就绪需另行确认', STATE_NOT_CONFIRMED: '暂未核验到预期状态，需要核对',
+    EXECUTION_UNCERTAIN: '操作可能已经产生影响，结果不确定，需要核对', AGENT_RESTARTED: 'Agent 执行期间重启，结果不确定，不会自动重做',
+    EXPIRED: '任务已过执行期限', COMMAND_EXPIRED_ABSENT: '任务过期，Agent 确认未接收此命令', CONFIRMATION_EXPIRED: '超过结果确认期限，请核对 Agent 与容器',
+    TARGET_CHANGED: '操作目标已变化，已停止继续投递', TARGET_UNAVAILABLE: '操作目标无法核验', INSTANCE_NOT_ALLOWED: '实例不在操作允许列表',
+    EXECUTION_CONTEXT_CHANGED: '节点、持久记录或执行模式已变化', EXECUTION_MODE_CHANGED: '执行模式已变化，需要重新核对',
+    AGENT_BINDING_CHANGED: 'Agent 身份或持久记录已变化，已停止继续投递', AGENT_RECORD_LOST: '已接收的命令记录缺失，结果待人工核对',
+    AGENT_COMMAND_CONFLICT: 'Agent 中已有相同命令标识但内容不一致的记录', AGENT_REJECTED: 'Agent 已明确拒绝命令',
+    AGENT_QUERY_UNCONFIRMED: '暂未查明 Agent 的任务结果', AGENT_ACCEPTANCE_UNCONFIRMED: '尚未确认 Agent 是否已接收',
+    CONTROL_DISABLED: '控制已关闭，停止新投递', LEGACY_MOCK: '历史数据库模拟记录，不会自动下发'
+  }
+  return labels[value] || (/^[A-Z][A-Z0-9_]+$/.test(value) ? '任务状态已更新，技术结果码见详情' : value)
+}
+export const actionLabel = (value: string): string => ({ START: '启动', STOP: '停止', RESTART: '重启' })[value] || value
+export const taskTerminal = (task: Task): boolean => task.executionMode !== 'UNKNOWN' && (task.status === 'SUCCEEDED' || task.status === 'FAILED')
+export function taskResultLabel(task: Task): string {
+  if (task.status !== 'SUCCEEDED') return taskStatusLabel(task.status)
+  return task.executionMode === 'MOCK' ? '模拟成功 · 未操作 Docker' : task.executionMode === 'LEGACY_MOCK' ? '旧模拟记录完成' : task.executionMode === 'DOCKER' ? 'Agent 报告执行成功' : '结果未验证 · 来源未知'
+}
+export function normalizeTaskEvents(input: unknown, taskId: string): TaskEvent[] {
+  if (!Array.isArray(input)) throw new Error('任务事件格式无效')
+  let previous = -1
+  return input.map(value => {
+    const x = asRecord(value)
+    if (x.taskId !== taskId || !text(x.id) || typeof x.sequence !== 'number' || !Number.isSafeInteger(x.sequence) || x.sequence < 1 || x.sequence <= previous || !timestamp(x.occurredAt)) throw new Error('任务事件身份、顺序或格式不匹配')
+    previous = x.sequence
+    return { id: text(x.id), taskId, sequence: x.sequence, fromStatus: x.fromStatus == null ? null : taskStatus(x.fromStatus), toStatus: taskStatus(x.toStatus), actor: text(x.actor, '未记录'), reason: text(x.reason), occurredAt: timestamp(x.occurredAt) }
+  })
 }
 
 /** 校验日志响应身份，防止错误路由被展示成另一实例的日志。 */

@@ -20,6 +20,7 @@ public final class InstanceService {
     private static final Pattern MEMORY = Pattern.compile("(?i)^([0-9]+(?:\\.[0-9]+)?)\\s*([kmgt]?i?b)?$");
     private final AgentConfig config;
     private final CommandRunner runner;
+    private final Map<String, String> mockStates = new java.util.concurrent.ConcurrentHashMap<>();
 
     public InstanceService(AgentConfig config) { this(config, new ProcessCommandRunner()); }
     public InstanceService(AgentConfig config, CommandRunner runner) { this.config = config; this.runner = runner; }
@@ -42,7 +43,7 @@ public final class InstanceService {
     public InstanceStatus status(String instanceId) {
         String container = requireKnownContainer(instanceId);
         if (config.mock()) {
-            return snapshot(instanceId, container, "running", new ContainerStats(3.2, 512L * 1024 * 1024), Instant.now().toString());
+            return snapshot(instanceId, container, mockStates.getOrDefault(instanceId, "running"), new ContainerStats(3.2, 512L * 1024 * 1024), Instant.now().toString());
         }
         String state = command("inspect", "-f", "{{.State.Status}}", container).trim();
         // stats 的键是实际容器名，不能用对外实例别名查询。
@@ -133,11 +134,16 @@ public final class InstanceService {
         return command("logs", "--tail", String.valueOf(Math.max(1, Math.min(limit, 1000))), container).lines().toList();
     }
 
-    public String execute(String instanceId, String action) {
+    public String execute(String instanceId, String action, Runnable beforeSideEffect) {
         String container = requireKnownContainer(instanceId);
         if (!("start".equals(action) || "stop".equals(action) || "restart".equals(action)))
             throw new IllegalArgumentException("Unsupported action");
-        if (config.mock()) return "mock " + action + " completed";
+        // 发现可能阻塞至截止时间之后；执行命令/修改模拟状态之前必须再次核对。
+        beforeSideEffect.run();
+        if (config.mock()) {
+            mockStates.put(instanceId, action.equals("stop") ? "exited" : "running");
+            return "mock " + action + " completed";
+        }
         return command(action, container).trim();
     }
 
@@ -151,6 +157,9 @@ public final class InstanceService {
         }
         throw new IllegalArgumentException("Unknown instance id");
     }
+
+    /** 接收及执行前分别解析目标，持久任务不能因别名变化改为操作另一容器。 */
+    public String resolveControlTarget(String instanceId) { return requireKnownContainer(instanceId); }
 
     private String command(String... args) {
         List<String> command = new ArrayList<>();

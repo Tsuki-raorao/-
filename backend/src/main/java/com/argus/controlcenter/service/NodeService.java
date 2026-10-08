@@ -3,6 +3,7 @@ package com.argus.controlcenter.service;
 import com.argus.controlcenter.domain.*;
 import com.argus.controlcenter.dto.CreateNodeRequest;
 import com.argus.controlcenter.exception.NotFoundException;
+import com.argus.controlcenter.exception.TaskControlException;
 import com.argus.controlcenter.repository.NodeRepository;
 import com.argus.controlcenter.repository.InstanceRepository;
 import com.argus.controlcenter.repository.TaskRepository;
@@ -42,13 +43,13 @@ public class NodeService {
         return repository.save(n);
     }
     public long count() { return repository.count(); }
-    /** 删除节点及其实例；生产只读拦截器会在控制器入口阻止未授权请求。 */
+    /** 只删除无任务历史的节点；任何历史任务（包括旧演示）均保护审计不被级联清除。 */
     @Transactional
     public void delete(String id) {
         repository.findByIdForUpdate(id).orElseThrow(() -> new NotFoundException("node not found: " + id));
+        if (tasks.hasNodeHistory(id)) throw new TaskControlException(409,"NODE_HAS_TASK_HISTORY");
         for (String instanceId : instances.findIdsByNodeId(id)) {
             logs.deleteByInstanceId(instanceId);
-            tasks.deleteByInstanceId(instanceId);
         }
         instances.deleteByNodeId(id);
         repository.deleteById(id);

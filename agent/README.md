@@ -36,6 +36,10 @@ java -cp out com.argus.agent.AgentApplication --config=config/agent.properties
 | `ARGUS_AGENT_MOCK` | 是否使用 mock 执行器 |
 | `ARGUS_AGENT_DISCOVERY` | 是否自动发现 Docker 容器 |
 | `ARGUS_AGENT_CONTROL_ENABLED` | 是否允许创建执行任务，默认关闭 |
+| `ARGUS_AGENT_CONTROL_TOKEN` | 独立控制令牌，必须与读取令牌不同；POST/GET tasks 使用它 |
+| `ARGUS_AGENT_CONTROL_INSTANCES` | 允许控制的 Agent 局部 ID，逗号分隔；自动发现不授予控制权 |
+| `ARGUS_AGENT_TASK_DIR` | 持久 Inbox 目录，默认 `agent/data/task-inbox` |
+| `ARGUS_AGENT_TASK_MAX_RECORDS` | Inbox 记录容量，默认 10000；满后拒绝新命令，原命令仍可查询 |
 | `ARGUS_AGENT_MAX_TASKS` | 并发任务上限 |
 | `ARGUS_AGENT_MAX_REQUEST_BYTES` | 请求体大小上限 |
 | `ARGUS_AGENT_MAX_HTTP_THREADS` | HTTP 工作线程上限 |
@@ -74,10 +78,10 @@ java -cp out com.argus.agent.AgentApplication --config=config/agent.properties
 | POST | `/api/agent/heartbeat` | 返回节点在线确认，不执行主动上报 |
 | GET | `/api/agent/instances` | 实例状态与资源快照 |
 | GET | `/api/agent/instances/{instanceId}/logs?limit=100` | 读取已允许实例的最近日志 |
-| POST | `/api/agent/tasks` | 在控制开关开启时创建受限动作任务 |
-| GET | `/api/agent/tasks/{taskId}` | 查询内存中的任务结果 |
+| POST | `/api/agent/tasks` | 控制令牌、开关与允许列表通过后，持久接收七字段命令 |
+| GET | `/api/agent/tasks/{commandId}` | 用控制令牌查询持久结果；关闭控制后仍可查询 |
 
-配置令牌后所有接口都要求 `Authorization: Bearer <token>`，不接受查询参数传递令牌。mock 模式可不配置令牌，仅用于本地开发。指标包含 `argus_agent_up`、`argus_agent_info`、`argus_host_cpu_percent`、`argus_host_memory_bytes`、`argus_host_memory_total_bytes`、`argus_host_memory_percent`；不可用数值直接省略。`argus_host_metrics_available` 表示基础指标是否全部可用，`argus_host_cpu_available` 和 `argus_host_memory_available` 分别指示可用性，0 是明确的采集状态而非伪造的资源值。`/metrics` 不执行 Docker 命令。
+配置令牌后读取接口要求 `Authorization: Bearer <read-token>`；任务 POST/GET 要求独立控制令牌，控制令牌也可读取。不接受查询参数传递令牌。纯只读 mock 模式可不配置令牌；一旦开放控制，mock 也要求两个非空且不同的令牌和明确允许列表。指标包含 `argus_agent_up`、`argus_agent_info`、`argus_host_cpu_percent`、`argus_host_memory_bytes`、`argus_host_memory_total_bytes`、`argus_host_memory_percent`；不可用数值直接省略。`argus_host_metrics_available` 表示基础指标是否全部可用，`argus_host_cpu_available` 和 `argus_host_memory_available` 分别指示可用性，0 是明确的采集状态而非伪造的资源值。`/metrics` 不执行 Docker 命令。
 
 ## 执行边界
 
@@ -85,7 +89,7 @@ java -cp out com.argus.agent.AgentApplication --config=config/agent.properties
 
 HTTP 使用固定工作线程和有界等待队列。满队列采用 `CallerRunsPolicy`：JDK 调度线程执行一项请求，给接收端施加背压；实际处理线程最多为配置工作线程数加一个调度线程。它不是 HTTP 429 限流，也不能消除慢客户端或慢任务占用线程的问题；连接层的超时与速率控制仍需反向代理等外层措施。关闭时先停止 HTTP 服务、关闭连接，再关闭执行器，不能靠静默丢弃请求实现拒绝。
 
-任务记录仍保存在内存中，重启后丢失。控制中心当前没有向此任务接口下发命令，因此网页显示任务成功不代表 Agent 操作成功。真实控制仍需持久化任务、幂等、授权、审计和恢复流程支持。
+任务现有持久 Inbox：中央 UUID 为任务 ID，相同七字段请求返回原结果，冲突返回 409。PENDING 落盘后才确认接收，RUNNING 落盘后才执行；执行后核验实例状态。重启发现 RUNNING 则改为 UNKNOWN，不自动重放，UNKNOWN 持续占用该实例的控制互斥。MOCK 的 stop/start/restart 会改变进程内模拟状态并核验，但不会控制真实 Docker。完整协议、磁盘格式和恢复边界见 [持久任务 Inbox](docs/持久任务Inbox.md)。
 
 真实只读采集与远程动作是不同开关。当前部署应保持 `control.enabled=false`，Agent 只允许控制中心或受控管理来源访问。Docker 访问权限本身具有较高影响范围，需要按运行环境单独限制。
 
@@ -106,6 +110,6 @@ Invoke-RestMethod http://localhost:8090/api/agent/instances
 .\scripts\test-agent.ps1
 ```
 
-测试仅依赖已安装 JDK 与 PowerShell，输出、临时目录和子进程文件都在忽略提交的 `agent/out-test/`。当前 23 项 Java 测试覆盖未知/零值、来源、空发现与失败区别、统计失败、容器别名、授权和只读、Prometheus 缺失语义、超管道容量输出、输出上限、超时清理、HTTP 突发与关闭连接；其中两项使用真实 Java 包装进程及其子进程，检查超限/超时后两层 PID 和读取线程均已结束。另外使用 PowerShell 的独立 JSON 解析器验证 null、非有限数与控制字符往返。
+测试仅依赖已安装 JDK 与 PowerShell，输出、临时目录和子进程文件都在忽略提交的 `agent/out-test/`。保留原 23 项采集/进程/HTTP 测试，另有 21 项 Inbox 测试覆盖严格命令 JSON、并发去重、冲突、身份与允许列表、期限、UNKNOWN 互斥、容量、损坏/写失败、跨进程目录锁与真实进程强制退出恢复。三个崩溃窗口验证 PENDING 可恢复、RUNNING 不重放、终态可重查，持久副作用计数始终为一次。另用 PowerShell 独立解析器验证采集与任务 JSON 契约。
 
-2026-10-08 本地验证：23 项通过，0 失败，独立 JSON 解析通过。Docker 结果全部注入模拟，子进程仅为测试 Java 程序；这不等于真实 Docker、远程服务器、负载或恢复验收。任务持久化、幂等恢复、主动通信与业务 Adapter 注册仍未实现。
+2026-10-08 本地验证：23 项原测试与 21 项 Inbox 测试通过，0 失败，独立 JSON 解析通过。新增期限测试以受控时钟模拟 RUNNING 持久化、执行入口容器发现期间过期，验证动作次数均为零。Docker 结果与动作使用注入模拟或 MOCK，子进程仅为测试 Java 程序；这不等于真实 Docker、远程服务器、负载或断电恢复验收。主动通信、业务 Adapter 注册及完整用户/项目权限仍未实现；跨模块验收以根目录进度文档为准。

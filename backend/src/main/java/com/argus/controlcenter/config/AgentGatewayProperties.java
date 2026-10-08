@@ -19,7 +19,7 @@ public class AgentGatewayProperties {
     private boolean enabled = false;
     /** 是否保持只读模式。当前版本只实现 true 的读取路径。 */
     private boolean readOnly = true;
-    /** 是否允许未来的远程控制动作；默认关闭。 */
+    /** 可靠任务的额外控制 gate；默认关闭，原只读 GET 网关仍保持 readOnly=true。 */
     private boolean allowControl = false;
     /** 是否强制校验目标主机白名单。默认强制。 */
     private boolean requireAllowlist = true;

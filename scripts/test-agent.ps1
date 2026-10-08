@@ -15,6 +15,8 @@ $sourcePaths = @(
 if ($LASTEXITCODE -ne 0) { throw 'Agent 测试编译失败。' }
 & java "-Djava.io.tmpdir=$testTemp" -cp $testOutput com.argus.agent.AgentTests $testOutput
 if ($LASTEXITCODE -ne 0) { throw 'Agent 测试失败。' }
+& java "-Djava.io.tmpdir=$testTemp" -cp $testOutput com.argus.agent.TaskInboxTests $testOutput
+if ($LASTEXITCODE -ne 0) { throw 'Agent Inbox 测试失败。' }
 
 # 使用独立的 JSON 解析器检查输出，避免只以字符串包含断言冒充合法 JSON。
 $json = Get-Content -LiteralPath (Join-Path $testOutput 'json-contract.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -30,4 +32,9 @@ if ($health.protocolVersion -ne '1.1' -or $health.dataSource -ne 'HOST' -or $ins
     throw 'Agent 协议或数据来源不匹配。'
 }
 Write-Output '[PASS] 独立 JSON 解析与控制字符往返检查'
+$task = Get-Content -LiteralPath (Join-Path $testOutput 'task-contract.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($task.status -ne 'SUCCEEDED' -or $task.executionMode -ne 'MOCK' -or $task.observedStatus -ne 'STOPPED' -or -not $task.storeId) {
+    throw '持久任务 JSON 契约不匹配。'
+}
+Write-Output '[PASS] 持久任务 JSON 契约检查'
 Write-Output '测试均使用模拟 Docker、本机 HTTP 与 Java 子进程；没有连接或修改真实 Docker/远程服务器。'

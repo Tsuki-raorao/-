@@ -19,6 +19,8 @@ public class SecurityProperties {
 
     /** API 访问令牌，只从环境变量注入，不写入配置文件或日志。 */
     private String apiAccessToken = "";
+    /** 独立操作令牌；可读 API，查看令牌不能提交控制任务。 */
+    private String apiControlToken = "";
 
     public boolean isReadOnly() { return readOnly; }
     public void setReadOnly(boolean readOnly) { this.readOnly = readOnly; }
@@ -28,4 +30,6 @@ public class SecurityProperties {
 
     public String getApiAccessToken() { return apiAccessToken; }
     public void setApiAccessToken(String apiAccessToken) { this.apiAccessToken = apiAccessToken == null ? "" : apiAccessToken; }
+    public String getApiControlToken() { return apiControlToken; }
+    public void setApiControlToken(String value) { apiControlToken = value == null ? "" : value; }
 }

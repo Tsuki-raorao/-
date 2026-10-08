@@ -10,6 +10,8 @@ import { loadTs } from './load-ts.mjs'
 // 编译实际组件的 setup，替换网络和生命周期；检验请求时序及页面提交，而非复制 load 实现。
 const models = await loadTs('models')
 const logs = await loadTs('logs')
+const taskControl = await loadTs('task-control')
+const taskDetail = await loadTs('task-detail')
 const { descriptor } = parse(readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8'))
 const componentCode = ts.transpileModule(compileScript(descriptor, { id: 'refresh-test' }).content, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }
@@ -20,10 +22,11 @@ function component(api) {
   const modules = {
     vue: { ...vue, onMounted() {}, onUnmounted() {}, watch() {} },
     './api': { api, ApiRequestError, getApiToken: () => '', clearApiToken() {}, saveApiToken() {} },
-    './models': models, './logs': logs, './components/InstanceTable.vue': { default: {} }
+    './models': models, './logs': logs, './task-control': taskControl, './task-detail': taskDetail,
+    './components/InstanceTable.vue': { default: {} }, './components/TaskDetail.vue': { default: {} }
   }
   const exports = {}
-  vm.runInNewContext(componentCode, { exports, require: name => modules[name], window: { location: { hash: '#/overview' } }, console })
+  vm.runInNewContext(componentCode, { exports, require: name => modules[name], window: { location: { hash: '#/overview' }, history: { pushState() {} }, sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} } }, console })
   return exports.default.setup({}, { expose() {} })
 }
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
@@ -61,4 +64,55 @@ test('节点成功但实例失败不能提交半份页面或声称刷新成功',
   assert.equal(app.nodes.value.length, 0)
   assert.equal(app.instances.value.length, 0)
   assert.notEqual(app.loadError.value, '')
+})
+
+const controlledInstance = { id: 'central-a', nodeId: 'node-a', agentInstanceId: 'same', name: 'same', status: 'running' }
+const capabilities = { controlEnabled: true, canControl: true, allowedActions: ['START', 'STOP', 'RESTART'], targets: [{ instanceId: 'central-a', executionMode: 'MOCK', allowedActions: ['START', 'STOP', 'RESTART'] }], reason: '' }
+const baseApi = () => ({ health: async () => ({ status: 'UP', readOnly: false }), nodes: async () => [{ id: 'node-a' }], instances: async () => [controlledInstance], tasks: async () => [], capabilities: async () => capabilities })
+
+test('能力接口失败只关闭操作，不使观察页不可用；只读始终优先', async () => {
+  const app = component({ ...baseApi(), capabilities: async () => { throw Error('unavailable') } })
+  await app.load()
+  assert.equal(app.connected.value, true)
+  assert.equal(app.instances.value.length, 1)
+  assert.match(app.actionReason(controlledInstance, 'RESTART'), /权限读取失败/)
+  app.capabilities.value = capabilities
+  app.readOnly.value = true
+  assert.match(app.actionReason(controlledInstance, 'RESTART'), /只读/)
+})
+
+test('真正编译的组件需先确认才提交，202 只显示接受；任务成功不改观测实例', async () => {
+  const calls = []
+  const app = component({ ...baseApi(), control: async intent => {
+    calls.push(intent)
+    return models.normalizeTask({ ...intent, id: 'task-a', commandId: 'command-a', status: 'SUCCEEDED', executionMode: intent.expectedExecutionMode })
+  } })
+  await app.load()
+  app.control('RESTART', controlledInstance)
+  assert.equal(calls.length, 0)
+  assert.equal(app.confirmation.value.instanceId, 'central-a')
+  app.confirmation.value = null
+  await app.confirmControl()
+  assert.equal(calls.length, 0)
+  app.control('RESTART', controlledInstance)
+  await app.confirmControl()
+  assert.equal(calls.length, 1)
+  assert.match(calls[0].key, /^[0-9a-f-]{36}$/)
+  assert.match(app.notice.value, /202/)
+  assert.match(app.notice.value, /不代表已经执行成功/)
+  assert.equal(app.instances.value[0].status, 'running')
+  assert.equal(app.page.value, 'tasks')
+})
+
+test('确认期间模式变化不发送；已有 UNKNOWN 任务不能重新控制', async () => {
+  let sent = 0
+  const app = component({ ...baseApi(), control: async () => { sent++ } })
+  await app.load()
+  app.control('RESTART', controlledInstance)
+  app.capabilities.value = { ...capabilities, targets: [{ ...capabilities.targets[0], executionMode: 'DOCKER' }] }
+  await app.confirmControl()
+  assert.equal(sent, 0)
+  assert.match(app.notice.value, /模式已变化/)
+  app.tasks.value = [models.normalizeTask({ id: 'task-a', instanceId: 'central-a', status: 'UNKNOWN', executionMode: 'MOCK' })]
+  assert.match(app.actionReason(controlledInstance, 'START'), /未决任务/)
 })

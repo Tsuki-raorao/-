@@ -1,6 +1,11 @@
 server:
   port: 8080
 spring:
+  task:
+    scheduling:
+      # 单个任务 worker 有界顺序执行，独立余量避免慢控制请求阻塞原有采集。
+      pool:
+        size: 2
   application:
     name: argus-control-center
   datasource:
@@ -18,6 +23,18 @@ argus:
     # 域名解封前建议开启；令牌只通过环境变量注入，健康检查仍保持可探活。
     api-auth-required: ${ARGUS_API_AUTH_REQUIRED:false}
     api-access-token: ${ARGUS_API_ACCESS_TOKEN:}
+    api-control-token: ${ARGUS_API_CONTROL_TOKEN:}
+  tasks:
+    control-enabled: ${ARGUS_TASK_CONTROL_ENABLED:false}
+    allow-docker: ${ARGUS_TASK_ALLOW_DOCKER:false}
+    allowed-instance-ids: ${ARGUS_TASK_ALLOWED_INSTANCE_IDS:}
+    agent-control-token: ${ARGUS_AGENT_CONTROL_TOKEN:}
+    lease: ${ARGUS_TASK_LEASE:45s}
+    retry-delay: ${ARGUS_TASK_RETRY_DELAY:3s}
+    command-ttl: ${ARGUS_TASK_COMMAND_TTL:5m}
+    confirmation-grace: ${ARGUS_TASK_CONFIRMATION_GRACE:5m}
+    poll-interval-ms: ${ARGUS_TASK_POLL_INTERVAL_MS:1000}
+    initial-delay-ms: ${ARGUS_TASK_INITIAL_DELAY_MS:5000}
   # 本地演示默认开启；生产/MySQL 配置会覆盖为关闭。
   demo-data:
     enabled: true

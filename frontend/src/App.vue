@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ApiRequestError, api, clearApiToken, getApiToken, saveApiToken, type Instance, type NodeItem, type Task } from './api'
-import { instanceQuality, metricsLabel, nodeQuality, percent, sourceLabel, timeLabel } from './models'
+import { actionLabel, executionLabel, instanceQuality, metricsLabel, nodeQuality, percent, sourceLabel, taskResultLabel, taskTerminal, timeLabel, type TaskAction } from './models'
 import { createLogReader, type LogState } from './logs'
+import { allowedTarget, createIntentSender, disabledCapabilities, newIntentKey, type ActionIntent, type Capabilities, type IntentState } from './task-control'
+import { createTaskReader, type TaskDetailState } from './task-detail'
 import InstanceTable from './components/InstanceTable.vue'
+import TaskDetail from './components/TaskDetail.vue'
 
 type Page = 'overview' | 'nodes' | 'instances' | 'tasks' | 'logs'
 const nav = [{ id: 'overview', label: '概览', icon: '◈' }, { id: 'nodes', label: '节点', icon: '⌘' }, { id: 'instances', label: '实例', icon: '▣' }, { id: 'tasks', label: '任务', icon: '✓' }, { id: 'logs', label: '日志', icon: '≡' }] as const
@@ -23,6 +26,12 @@ const autoRefresh = ref(true)
 const authRequired = ref(false)
 const tokenInput = ref('')
 const hasApiToken = ref(Boolean(getApiToken()))
+const editToken = ref(false)
+const capabilities = ref<Capabilities>(disabledCapabilities())
+const intentState = ref<IntentState>({ intent: null, phase: 'idle', error: '' })
+const confirmation = ref<Omit<ActionIntent, 'key'> | null>(null)
+const selectedTask = ref('')
+const taskDetail = ref<TaskDetailState>({ id: '', phase: 'idle', task: null, events: [], error: '' })
 const now = ref(Date.now())
 const currentLabel = computed(() => nav.find(n => n.id === page.value)?.label || '概览')
 const nodeMap = computed(() => new Map(nodes.value.map(node => [node.id, node])))
@@ -65,11 +74,43 @@ function loadLogs() {
   return logReader.select(selected.value.id)
 }
 watch([page, selectedInstance], () => { void loadLogs() }, { flush: 'sync' })
+const taskReader = createTaskReader(api.task, api.taskEvents, state => {
+  taskDetail.value = state
+  if (state.task) mergeTask(state.task)
+})
+function loadTaskDetail() {
+  if (page.value !== 'tasks' || !selectedTask.value) { taskReader.cancel(); return Promise.resolve() }
+  return taskReader.select(selectedTask.value)
+}
+watch([page, selectedTask], () => { void loadTaskDetail() }, { flush: 'sync' })
+const intentSender = createIntentSender(api.control, {
+  getItem: key => window.sessionStorage.getItem(key),
+  setItem: (key, value) => window.sessionStorage.setItem(key, value),
+  removeItem: key => window.sessionStorage.removeItem(key)
+}, state => { intentState.value = state })
+watch(confirmation, async value => { if (value) { await nextTick(); document.getElementById('cancel-action')?.focus() } })
+function trapConfirmation(event: KeyboardEvent) {
+  if (event.key !== 'Tab') return
+  const buttons = (event.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
+  const first = buttons[0], last = buttons[buttons.length - 1]
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+}
 
 let loadGeneration = 0
+async function loadCapabilities(ticket: number) {
+  capabilities.value = disabledCapabilities('正在验证操作权限')
+  try {
+    const next = await api.capabilities()
+    if (ticket === loadGeneration) capabilities.value = next
+  } catch {
+    if (ticket === loadGeneration) capabilities.value = disabledCapabilities('操作权限读取失败，已禁用操作；仍可查看快照')
+  }
+}
 async function load() {
   const ticket = ++loadGeneration
   loading.value = true
+  void loadCapabilities(ticket)
   try {
     // 节点批次先读、实例后读，避免跨同步提交把旧实例清单与新节点批次拼在一起误判“未发现”。
     const [health, [nextNodes, nextInstances], nextTasks] = await Promise.all([
@@ -79,7 +120,7 @@ async function load() {
     ])
     if (ticket !== loadGeneration) return
     connected.value = health.status === 'UP'
-    readOnly.value = health.readOnly
+    readOnly.value = health.readOnly !== false
     nodes.value = nextNodes
     instances.value = nextInstances
     tasks.value = nextTasks
@@ -87,6 +128,7 @@ async function load() {
     authRequired.value = false
     if (selectedInstance.value && !nextInstances.some(item => item.id === selectedInstance.value)) selectedInstance.value = ''
     if (page.value === 'logs' && selected.value && logState.value.phase !== 'loading') void loadLogs()
+    if (page.value === 'tasks' && selectedTask.value && taskDetail.value.phase !== 'loading') void loadTaskDetail()
   } catch (error) {
     if (ticket !== loadGeneration) return
     if (error instanceof ApiRequestError && error.status === 401) authRequired.value = true
@@ -96,6 +138,7 @@ async function load() {
     tasks.value = []
     selectedInstance.value = ''
     logReader.cancel()
+    taskReader.cancel()
     loadError.value = error instanceof Error ? error.message : '读取失败，请重试'
   } finally {
     if (ticket === loadGeneration) loading.value = false
@@ -105,17 +148,19 @@ async function load() {
 function submitApiToken() {
   const token = tokenInput.value.trim()
   if (!token) { notice.value = '请输入控制中心访问令牌'; return }
+  invalidateRequests()
   saveApiToken(token)
   hasApiToken.value = true
   authRequired.value = false
   tokenInput.value = ''
+  editToken.value = false
   void load()
 }
-function removeApiToken() {
+function invalidateRequests() {
   loadGeneration++
-  clearApiToken()
-  hasApiToken.value = false
-  authRequired.value = true
+  confirmation.value = null
+  capabilities.value = disabledCapabilities()
+  intentSender.invalidate()
   connected.value = false
   loading.value = false
   nodes.value = []
@@ -123,26 +168,74 @@ function removeApiToken() {
   tasks.value = []
   selectedInstance.value = ''
   logReader.cancel()
+  selectedTask.value = ''
+  taskReader.cancel()
+}
+function removeApiToken() {
+  invalidateRequests()
+  clearApiToken()
+  hasApiToken.value = false
+  authRequired.value = true
+  tokenInput.value = ''
 }
 
-async function control(action: 'start' | 'stop' | 'restart', instance: Instance) {
-  if (!connected.value) { notice.value = '控制中心不可用，未提交记录'; return }
-  if (readOnly.value) { notice.value = '当前控制中心处于只读模式，未提交记录'; return }
-  notice.value = `正在记录 ${instance.name} 的模拟操作请求…`
-  try {
-    await api.control(instance.id, action)
-    await load()
-    notice.value = '模拟任务已记录；没有向容器下发操作'
-  } catch (error) {
-    notice.value = error instanceof ApiRequestError ? `提交失败：${error.message}` : '提交失败：控制中心不可用'
+function actionReason(instance: Instance, action: TaskAction): string {
+  if (loading.value || !connected.value) return '控制中心状态尚未验证'
+  if (readOnly.value) return '控制中心处于只读模式'
+  if (intentState.value.phase !== 'idle') return '已有提交待确认，请先核对原请求'
+  if (!instance.id || !instance.nodeId || !instance.agentInstanceId) return '实例身份不完整'
+  if (tasks.value.some(task => task.instanceId === instance.id && task.executionMode !== 'LEGACY_MOCK' && !taskTerminal(task))) return '实例已有未决任务，请查看任务详情'
+  if (!allowedTarget(capabilities.value, instance.id, action)) return capabilities.value.reason || '当前令牌或目标不允许此操作'
+  return ''
+}
+function control(action: TaskAction, instance: Instance) {
+  const reason = actionReason(instance, action)
+  if (reason) { notice.value = reason; return }
+  const target = allowedTarget(capabilities.value, instance.id, action)!
+  confirmation.value = { instanceId: instance.id, nodeId: instance.nodeId, agentInstanceId: instance.agentInstanceId, name: instance.name, action, expectedExecutionMode: target.executionMode }
+}
+function mergeTask(task: Task) {
+  const current = tasks.value.find(item => item.id === task.id)
+  if (current?.updatedAt && task.updatedAt && Date.parse(task.updatedAt) < Date.parse(current.updatedAt)) return
+  tasks.value = current ? tasks.value.map(item => item.id === task.id ? task : item) : [task, ...tasks.value]
+}
+function showTask(id: string) { selectedTask.value = id; go('tasks') }
+async function sendIntent(intent?: ActionIntent) {
+  const task = await intentSender.submit(intent)
+  if (!task) { notice.value = intentState.value.error; return }
+  // 提交前已在途的任务列表不能用旧清单覆盖新收到的任务。
+  loadGeneration++
+  loading.value = false
+  mergeTask(task)
+  notice.value = '控制中心已接收任务（202）；请在任务详情查询结果，这不代表已经执行成功。'
+  showTask(task.id)
+}
+async function confirmControl() {
+  const choice = confirmation.value
+  if (!choice) return
+  const instance = instances.value.find(item => item.id === choice.instanceId)
+  const target = allowedTarget(capabilities.value, choice.instanceId, choice.action)
+  if (!instance || actionReason(instance, choice.action) || target?.executionMode !== choice.expectedExecutionMode
+      || instance.nodeId !== choice.nodeId || instance.agentInstanceId !== choice.agentInstanceId) {
+    confirmation.value = null; notice.value = '操作权限、目标或执行模式已变化，请刷新后重新确认'; return
   }
+  confirmation.value = null
+  try { await sendIntent({ ...choice, key: newIntentKey() }) } catch (error) { notice.value = error instanceof Error ? error.message : '无法创建请求标识，未发送' }
+}
+const canConfirmPending = computed(() => {
+  const intent = intentState.value.intent
+  return !!intent && intentState.value.phase === 'uncertain' && connected.value && !loading.value && !readOnly.value
+    && allowedTarget(capabilities.value, intent.instanceId, intent.action)?.executionMode === intent.expectedExecutionMode
+})
+async function confirmPending() {
+  if (!canConfirmPending.value) return
+  await sendIntent()
 }
 function go(nextPage: Page) {
   if (page.value !== nextPage) window.history.pushState({}, '', `#/${nextPage}`)
   page.value = nextPage
 }
 function showUnavailable(feature: string) { notice.value = `${feature}功能将在后续版本开放` }
-const taskStatusLabel = (value: Task['status']) => ({ success: '记录完成', running: '处理中', failed: '失败', pending: '待处理' })[value]
 
 let refreshTimer: number | undefined
 let clockTimer: number | undefined
@@ -156,6 +249,8 @@ onMounted(() => {
 onUnmounted(() => {
   loadGeneration++
   logReader.cancel()
+  taskReader.cancel()
+  intentSender.invalidate()
   window.removeEventListener('hashchange', syncPageFromLocation)
   window.removeEventListener('popstate', syncPageFromLocation)
   if (refreshTimer) window.clearInterval(refreshTimer)
@@ -165,20 +260,21 @@ onUnmounted(() => {
 
 <template>
   <div class="shell">
-    <aside class="sidebar">
+    <aside class="sidebar" :inert="Boolean(confirmation)">
       <div class="brand"><img class="brand-logo" src="/logo.png?v=20261007" alt="未序 Logo" /><small>智能运维控制台</small></div>
       <div class="workspace"><span :class="['dot', connected ? 'online' : 'offline']"></span><div><small>当前工作区</small><strong>我的服务器</strong></div></div>
       <nav><button v-for="item in nav" :key="item.id" :class="{ active: page === item.id }" @click="go(item.id)"><span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>{{ item.label }}</button></nav>
       <div class="sidebar-bottom"><div class="profile"><img class="avatar avatar-image" src="/weixu-niang.png" alt="未序娘" /><div><b>未序娘</b><small>形象展示 · AI 尚未接入</small></div></div></div>
     </aside>
-    <main class="main">
-      <header class="topbar"><div class="crumb">工作区 <span>/</span> <b>{{ currentLabel }}</b></div><div class="top-actions"><span class="connection"><i :class="{ offline: !connected }"></i>{{ loading ? '正在读取' : connected ? '控制中心可访问' : '控制中心不可用' }}</span><button v-if="hasApiToken" class="auth-clear" @click="removeApiToken">清除令牌</button><img class="top-avatar avatar-image" src="/weixu-niang.png" alt="未序娘" /></div></header>
+    <main class="main" :inert="Boolean(confirmation)">
+      <header class="topbar"><div class="crumb">工作区 <span>/</span> <b>{{ currentLabel }}</b></div><div class="top-actions"><span class="connection"><i :class="{ offline: !connected }"></i>{{ loading ? '正在读取' : connected ? '控制中心可访问' : '控制中心不可用' }}</span><button class="auth-clear" @click="editToken = !editToken">{{ hasApiToken ? '更换令牌' : '输入令牌' }}</button><button v-if="hasApiToken" class="auth-clear" @click="removeApiToken">清除令牌</button><img class="top-avatar avatar-image" src="/weixu-niang.png" alt="未序娘" /></div></header>
       <div class="content">
         <div class="page-head"><div><p class="eyebrow">ARGUS / {{ currentLabel }}</p><h1>{{ page === 'overview' ? '欢迎回来' : currentLabel }}</h1><p class="subtitle">按采集时间查看节点和实例，过期状态会明确标记。</p></div><button class="refresh" :disabled="loading" @click="load">↻ <span>刷新数据</span></button></div>
-        <div v-if="authRequired" class="auth-banner"><div><strong>需要访问令牌</strong><p>令牌只保存在当前浏览器会话中。</p></div><div class="auth-actions"><input v-model="tokenInput" type="password" placeholder="粘贴 Bearer 令牌" aria-label="访问令牌" @keyup.enter="submitApiToken" /><button class="primary" @click="submitApiToken">连接</button></div></div>
+        <div v-if="authRequired || editToken" class="auth-banner"><div><strong>连接控制中心</strong><p>可输入查看或操作令牌；权限由服务端核验。仅保存在当前浏览器会话。</p></div><div class="auth-actions"><input v-model="tokenInput" type="password" placeholder="粘贴 Bearer 令牌" aria-label="访问令牌" @keyup.enter="submitApiToken" /><button class="primary" @click="submitApiToken">连接</button></div></div>
         <div v-if="loadError" class="data-banner error" role="alert">读取失败：{{ loadError }}。未使用演示数据替代。</div>
         <div v-if="readOnly" class="data-banner">当前为只读模式：可以查询快照和 Agent 最近日志，写操作关闭。</div>
         <div v-if="hasMockData" class="data-banner mock" role="status">页面包含模拟数据，相关条目已标记，不代表真实服务器状态。</div>
+        <div v-if="intentState.phase !== 'idle'" class="data-banner pending-intent" role="status"><strong>{{ intentState.phase === 'submitting' ? '正在等待排队确认' : '提交结果待确认' }}</strong><p v-if="intentState.intent">{{ executionLabel(intentState.intent.expectedExecutionMode) }} · {{ actionLabel(intentState.intent.action) }} {{ intentState.intent.name }} · 节点 {{ intentState.intent.nodeId }} · 实例 {{ intentState.intent.instanceId }}</p><p>{{ intentState.error || '请等待，重复点击不会创建新命令。' }}</p><p>待确认请求保留原标识。核对会重送同一个请求；如果之前未入队，本次可能首次排队。</p><button v-if="intentState.phase === 'uncertain' && intentState.intent" class="refresh" :disabled="!canConfirmPending" @click="confirmPending">用原请求核对</button><p v-if="intentState.phase === 'uncertain' && !canConfirmPending">恢复连接并验证操作权限后可核对。不要清理浏览器中的待确认记录。</p></div>
 
         <template v-if="page === 'overview'">
           <section class="metrics">
@@ -188,7 +284,7 @@ onUnmounted(() => {
             <div class="metric-card"><span class="metric-label">活跃告警</span><strong>—</strong><span class="metric-foot neutral">告警源尚未接入</span></div>
           </section>
           <section class="grid-two"><div class="panel"><div class="panel-head"><div><h2>资源概览</h2><p>接入指标存储后显示历史曲线</p></div></div><div class="empty-state">当前仅展示采集快照，尚无历史指标曲线。</div></div><div class="panel"><div class="panel-head"><div><h2>需要关注</h2><p>当前没有接入告警源</p></div></div><div class="empty-state">暂无可验证的告警事件。</div></div></section>
-          <section class="panel instance-panel"><div class="panel-head"><div><h2>实例快照</h2><p>180 秒后标为旧快照；保留最近一次观测值</p></div><button class="text-btn" @click="go('instances')">查看实例 →</button></div><InstanceTable :items="instances" :nodes="nodes" :now="now" :read-only="readOnly || !connected" @control="control" /></section>
+          <section class="panel instance-panel"><div class="panel-head"><div><h2>实例快照</h2><p>180 秒后标为旧快照；保留最近一次观测值</p></div><button class="text-btn" @click="go('instances')">查看实例 →</button></div><InstanceTable :items="instances" :nodes="nodes" :now="now" :action-reason="actionReason" @control="control" /></section>
         </template>
 
         <template v-else-if="page === 'nodes'">
@@ -206,16 +302,17 @@ onUnmounted(() => {
 
         <template v-else-if="page === 'instances'">
           <section class="panel full"><div class="panel-head"><div><h2>服务实例</h2><p>同名容器按所属节点和中央实例 ID 区分</p></div><button class="primary" @click="showUnavailable('创建实例')">＋ 创建实例</button></div>
-            <div class="data-banner">远程执行尚未接通；当前操作按钮仅记录模拟任务，不会改变真实容器。</div>
-            <InstanceTable :items="instances" :nodes="nodes" :now="now" :read-only="readOnly || !connected" @control="control" />
+            <div class="data-banner">{{ capabilities.canControl && capabilities.controlEnabled ? '受控操作可用；提交前确认目标与执行模式，排队后到任务页查询结果。' : capabilities.reason }} 默认关闭控制。任务结果与实例采集状态分别记录。</div>
+            <InstanceTable :items="instances" :nodes="nodes" :now="now" :action-reason="actionReason" @control="control" />
           </section>
         </template>
 
         <template v-else-if="page === 'tasks'">
-          <section class="panel full"><div class="panel-head"><div><h2>任务记录（远程执行未接通）</h2><p>记录状态只反映中央数据库流程，不表示容器已经执行；完整审计尚未接入。</p></div></div>
+          <section class="panel full task-panel"><div class="panel-head"><div><h2>任务与执行结果</h2><p>排队不等于执行完成。区分真实 Docker、Agent 模拟与历史数据库模拟；每 15 秒查询。</p></div></div>
             <div v-if="!tasks.length" class="empty-state">暂无任务记录</div>
-            <div class="task-list"><div v-for="task in tasks" :key="task.id" class="task-row"><span class="task-check" :class="task.status">{{ task.status === 'success' ? '✓' : task.status === 'failed' ? '!' : '…' }}</span><div class="task-main"><strong>{{ task.action }}</strong><span>{{ task.target }}</span></div><span class="task-id">{{ task.id }}</span><span class="task-time">{{ task.createdAt }}</span><span :class="['task-status', task.status]">{{ taskStatusLabel(task.status) }}</span><span class="task-duration">{{ task.duration }}</span></div></div>
+            <div class="task-list"><button v-for="task in tasks" :key="task.id" class="task-row task-select" :class="{ selected: selectedTask === task.id }" :data-task-id="task.id" :disabled="!task.id" @click="showTask(task.id)"><span class="task-check" :class="task.status.toLowerCase()">{{ task.status === 'UNKNOWN' ? '?' : task.status === 'FAILED' ? '!' : '·' }}</span><div class="task-main"><strong>{{ actionLabel(task.action) }} · {{ executionLabel(task.executionMode) }}</strong><span>{{ task.nodeId || '历史节点未记录' }} / {{ task.agentInstanceId || task.instanceId }}</span><small class="identifier">实例：{{ task.instanceId }} · 任务：{{ task.id }}</small></div><span :class="['task-status', task.executionMode === 'UNKNOWN' ? 'unknown' : task.status.toLowerCase()]">{{ taskResultLabel(task) }}</span><time class="task-time">{{ timeLabel(task.updatedAt || task.createdAt) }}</time><span class="text-btn">查看详情 →</span></button></div>
           </section>
+          <TaskDetail v-if="selectedTask" :state="taskDetail" @refresh="loadTaskDetail" @close="selectedTask = ''" />
         </template>
 
         <template v-else-if="page === 'logs'">
@@ -236,6 +333,7 @@ onUnmounted(() => {
         </template>
       </div>
     </main>
+    <div v-if="confirmation" class="confirm-overlay" @keydown.esc="confirmation = null" @keydown="trapConfirmation"><section class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title"><p class="eyebrow">确认受控操作</p><h2 id="confirm-title">{{ actionLabel(confirmation.action) }} {{ confirmation.name }}</h2><p :class="['mode-warning', confirmation.expectedExecutionMode === 'DOCKER' ? 'danger' : 'mock']">{{ executionLabel(confirmation.expectedExecutionMode) }}</p><p v-if="confirmation.expectedExecutionMode === 'DOCKER'">这会对真实 Docker 容器执行{{ actionLabel(confirmation.action) }}。停止或重启可能中断服务与用户连接。</p><p v-else>这次只由 Agent 模拟执行，不会操作 Docker，也不能证明真实服务已启动或停止。</p><dl class="confirm-target"><dt>所属节点</dt><dd>{{ confirmation.nodeId }}</dd><dt>中央实例 ID</dt><dd>{{ confirmation.instanceId }}</dd><dt>Agent 局部 ID</dt><dd>{{ confirmation.agentInstanceId }}</dd></dl><p>确认后先进入任务队列。网络中断时保留原请求核对，不能当成失败直接重做。</p><div class="confirm-buttons"><button id="cancel-action" class="refresh" @click="confirmation = null">取消</button><button class="primary" data-testid="confirm-action" @click="confirmControl">确认{{ actionLabel(confirmation.action) }}并排队</button></div></section></div>
     <div v-if="notice" class="toast" role="status">{{ notice }} <button class="text-btn" aria-label="关闭提示" @click="notice = ''">×</button></div>
   </div>
 </template>
