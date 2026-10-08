@@ -33,12 +33,16 @@ class TaskMigrationCompatibilityTest {
         verify(source);
     }
     void verify(DriverManagerDataSource source) throws Exception {
+        verify(source, jdbc -> { });
+    }
+    void verify(DriverManagerDataSource source, java.util.function.Consumer<JdbcTemplate> prepareV4) throws Exception {
         Flyway.configure().dataSource(source).target("4").load().migrate();
         JdbcTemplate jdbc=new JdbcTemplate(source);
         jdbc.update("INSERT INTO nodes(id,name,address,status) VALUES('old-node','old','http://127.0.0.1:19091','UNKNOWN')");
         jdbc.update("INSERT INTO instances(id,agent_instance_id,name,node_id,container_name,version,status,updated_at) VALUES('old-instance','mc01','old','old-node','mc01','old','STOPPED',CURRENT_TIMESTAMP)");
         jdbc.update("INSERT INTO tasks(id,instance_id,action,status,message,created_at,finished_at) VALUES('old-task','old-instance','START','SUCCEEDED','old simulation',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         jdbc.update("INSERT INTO logs(id,instance_id,log_timestamp,level,message) VALUES('old-log','old-instance',CURRENT_TIMESTAMP,'INFO','old evidence')");
+        prepareV4.accept(jdbc);
         Flyway migration=Flyway.configure().dataSource(source).target("5").load();
         assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
         TaskRepository tasks=new TaskRepository(jdbc);

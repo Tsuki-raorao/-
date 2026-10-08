@@ -30,6 +30,7 @@ java -cp out com.argus.agent.AgentApplication --config=config/agent.properties
 | 变量 | 含义 |
 |---|---|
 | `ARGUS_AGENT_PORT` | 监听端口 |
+| `ARGUS_AGENT_BIND_ADDRESS` | 实际监听 IP，对应 `server.bind-address`；默认 `0.0.0.0`，本机隔离验证使用 `127.0.0.1` |
 | `ARGUS_AGENT_NODE_ID` / `ARGUS_AGENT_NODE_NAME` | 节点标识与显示名 |
 | `ARGUS_AGENT_ADVERTISED_HOST` | 控制中心可访问的节点入口 |
 | `ARGUS_AGENT_AUTH_TOKEN` | Bearer 认证令牌 |
@@ -45,6 +46,10 @@ java -cp out com.argus.agent.AgentApplication --config=config/agent.properties
 | `ARGUS_AGENT_MAX_HTTP_THREADS` | HTTP 工作线程上限 |
 | `ARGUS_AGENT_MAX_HTTP_QUEUE` | HTTP 等待队列长度，默认 64，范围 1–1024 |
 | `ARGUS_AGENT_MAX_COMMAND_OUTPUT_BYTES` | 单条 Docker 命令输出字节上限，默认 1 MiB，范围 1 KiB–16 MiB |
+
+监听地址仅接受 IPv4/IPv6 字面量，如 `127.0.0.1`、`::1`；不支持主机名或带协议/端口的 URL。显式空值、无效地址会拒绝启动，包括空的 `ARGUS_AGENT_BIND_ADDRESS`，不会退回配置文件或全接口监听。不存在于本机的地址、端口占用等绑定失败会清理 HTTP 资源和 Inbox 锁；启动日志显示实际绑定的地址/端口。默认 `0.0.0.0` 保留历史部署兼容性，不能据此认为默认仅本机可达。
+
+本机隔离验证可在配置中填 `server.bind-address=127.0.0.1`，或在启动该 Agent 的进程环境中设置 `ARGUS_AGENT_BIND_ADDRESS=127.0.0.1`。这只允许本机访问该监听入口；远程控制中心需要受控代理或隧道。`node.advertised-host` 是对外描述的入口信息，不能替代实际绑定配置。
 
 真实模式缺少令牌时拒绝启动。`instance.discovery=true` 时通过 `docker ps -a` 发现容器，实例 ID 与实际容器名一致，查询只允许已发现的名称；关闭发现时使用配置的单实例映射，此时 `instance.id` 可与 `instance.container` 不同，指标仍按真实容器名匹配。容器瞬时 CPU/内存来自 `docker stats --no-stream`，不是历史监控。
 
@@ -110,6 +115,8 @@ Invoke-RestMethod http://localhost:8090/api/agent/instances
 .\scripts\test-agent.ps1
 ```
 
-测试仅依赖已安装 JDK 与 PowerShell，输出、临时目录和子进程文件都在忽略提交的 `agent/out-test/`。保留原 23 项采集/进程/HTTP 测试，另有 21 项 Inbox 测试覆盖严格命令 JSON、并发去重、冲突、身份与允许列表、期限、UNKNOWN 互斥、容量、损坏/写失败、跨进程目录锁与真实进程强制退出恢复。三个崩溃窗口验证 PENDING 可恢复、RUNNING 不重放、终态可重查，持久副作用计数始终为一次。另用 PowerShell 独立解析器验证采集与任务 JSON 契约。
+测试仅依赖已安装 JDK 与 PowerShell，输出、临时目录和子进程文件都在忽略提交的 `agent/out-test/`。基础采集/进程/HTTP 共 27 项（保留原 23 项，增加 4 项监听配置及失败清理检查），另有 21 项 Inbox 测试覆盖严格命令 JSON、并发去重、冲突、身份与允许列表、期限、UNKNOWN 互斥、容量、损坏/写失败、跨进程目录锁与真实进程强制退出恢复。三个崩溃窗口验证 PENDING 可恢复、RUNNING 不重放、终态可重查，持久副作用计数始终为一次。另用 PowerShell 独立解析器验证采集与任务 JSON 契约。
 
 2026-10-08 本地验证：23 项原测试与 21 项 Inbox 测试通过，0 失败，独立 JSON 解析通过。新增期限测试以受控时钟模拟 RUNNING 持久化、执行入口容器发现期间过期，验证动作次数均为零。Docker 结果与动作使用注入模拟或 MOCK，子进程仅为测试 Java 程序；这不等于真实 Docker、远程服务器、负载或断电恢复验收。主动通信、业务 Adapter 注册及完整用户/项目权限仍未实现；跨模块验收以根目录进度文档为准。
+
+2026-10-09 监听配置增量验收：27 项基础测试 + 21 项 Inbox 测试共 48 项全部通过，两个独立 JSON 检查通过。新增检查验证配置优先级及显式空值拒绝、实际 socket 只绑定 loopback 且日志一致、端口占用失败后 Inbox 能立即重开，以及 HTTP 初始化失败后端口和 Inbox 均不残留。执行器在端口绑定前构造，避免 JDK 未启动 HttpServer 的 stop 无法可靠释放已绑定端口。此轮未连接远程服务器或执行真实 Docker。

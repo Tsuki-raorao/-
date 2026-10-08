@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.Set;
@@ -18,11 +21,24 @@ public record AgentConfig(int port, String nodeId, String nodeName, String authT
                           boolean controlEnabled, boolean discoveryEnabled, String advertisedHost,
                           int maxCommandOutputBytes, int maxHttpQueueSize,
                           String controlToken, Set<String> controlInstances, Path taskDirectory,
-                          int taskMaxRecords, boolean taskDirectoryConfigured) {
+                          int taskMaxRecords, boolean taskDirectoryConfigured, String bindAddress) {
     public AgentConfig {
+        bindAddress = validateBindAddress(bindAddress);
         controlInstances = Set.copyOf(controlInstances);
         if (!controlToken.isBlank() && controlToken.equals(authToken))
             throw new IllegalArgumentException("control token must differ from read token");
+    }
+    /** 保留持久任务阶段的构造方式，历史默认仍监听全部 IPv4 接口。 */
+    public AgentConfig(int port, String nodeId, String nodeName, String authToken, boolean mock,
+                       String dockerExecutable, String defaultInstanceId, String defaultContainer, int commandTimeoutSeconds,
+                       int maxConcurrentTasks, int maxRequestBytes, int maxHttpThreads, boolean controlEnabled,
+                       boolean discoveryEnabled, String advertisedHost, int maxCommandOutputBytes, int maxHttpQueueSize,
+                       String controlToken, Set<String> controlInstances, Path taskDirectory,
+                       int taskMaxRecords, boolean taskDirectoryConfigured) {
+        this(port, nodeId, nodeName, authToken, mock, dockerExecutable, defaultInstanceId, defaultContainer,
+                commandTimeoutSeconds, maxConcurrentTasks, maxRequestBytes, maxHttpThreads, controlEnabled,
+                discoveryEnabled, advertisedHost, maxCommandOutputBytes, maxHttpQueueSize, controlToken, controlInstances,
+                taskDirectory, taskMaxRecords, taskDirectoryConfigured, "0.0.0.0");
     }
     /** 保留既有采集测试的构造方式；只读时无意外磁盘写入。 */
     public AgentConfig(int port, String nodeId, String nodeName, String authToken, boolean mock,
@@ -79,7 +95,37 @@ public record AgentConfig(int port, String nodeId, String nodeName, String authT
                         "server.max-http-queue", 1, 1024), controlToken, controlInstances,
                 Path.of(envOr(p, "ARGUS_AGENT_TASK_DIR", "task.directory", "agent/data/task-inbox")),
                 positiveInt(envOr(p, "ARGUS_AGENT_TASK_MAX_RECORDS", "task.max-records", "10000"), "task.max-records", 1, 100000),
-                taskDirectoryConfigured);
+                taskDirectoryConfigured, bindAddress(p, System.getenv()));
+    }
+
+    /** 显式空环境变量是错误配置，不能回退到文件或全接口监听。 */
+    static String bindAddress(Properties properties, Map<String, String> environment) {
+        String value = environment.containsKey("ARGUS_AGENT_BIND_ADDRESS")
+                ? environment.get("ARGUS_AGENT_BIND_ADDRESS") : properties.getProperty("server.bind-address", "0.0.0.0");
+        return validateBindAddress(value);
+    }
+
+    /** 只接受 IP 字面地址，避免主机名解析或拼写错误改变监听范围。 */
+    private static String validateBindAddress(String value) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("server.bind-address must be a non-empty IP literal");
+        String address = value.trim();
+        try {
+            if (address.contains(":")) {
+                if (address.startsWith("[") || address.endsWith("]")) throw new IllegalArgumentException();
+                // 含冒号的字面量由 JDK IPv6 解析器验证，不进行 DNS 查找。
+                InetAddress.getByName(address);
+            } else {
+                String[] octets = address.split("\\.", -1);
+                if (octets.length != 4) throw new IllegalArgumentException();
+                for (String octet : octets) {
+                    if (!octet.matches("[0-9]{1,3}") || Integer.parseInt(octet) > 255) throw new IllegalArgumentException();
+                }
+                InetAddress.getByName(address);
+            }
+            return address;
+        } catch (UnknownHostException | IllegalArgumentException invalid) {
+            throw new IllegalArgumentException("server.bind-address must be a valid IPv4 or IPv6 literal");
+        }
     }
 
     private static String envOr(Properties p, String env, String key, String fallback) {

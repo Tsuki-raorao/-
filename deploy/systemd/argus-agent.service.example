@@ -9,6 +9,9 @@ User=argus-agent
 Group=argus-agent
 SupplementaryGroups=docker
 WorkingDirectory=/opt/argus/agent
+StateDirectory=argus-agent
+StateDirectoryMode=0700
+UMask=0077
 EnvironmentFile=/etc/argus/argus-agent.service.env
 ExecStart=/usr/bin/java -cp /opt/argus/agent/classes com.argus.agent.AgentApplication --config=/etc/argus/argus-agent.properties
 Restart=on-failure

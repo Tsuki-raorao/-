@@ -7,6 +7,12 @@ import com.argus.agent.model.InstanceStatus;
 import com.argus.agent.service.InstanceService;
 
 import java.net.URI;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -16,6 +22,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -184,6 +193,10 @@ public final class AgentTests {
         test("timeout terminates wrapper descendants and reader", () -> processTreeCleanup("tree-timeout", CommandFailure.Reason.TIMED_OUT, 2, 1024));
         test("bounded HTTP queue completes burst without discarded requests", AgentTests::boundedHttpBurst);
         test("server shutdown closes pending connections", AgentTests::shutdownPendingRequests);
+        test("binding config validates explicit addresses and empty overrides", AgentTests::bindAddressConfig);
+        test("explicit loopback binds only loopback and logs actual address", AgentTests::loopbackBinding);
+        test("failed port bind releases Inbox without explicit close", AgentTests::bindFailureReleasesInbox);
+        test("partial startup failure releases port and Inbox", AgentTests::partialStartupCleanup);
         System.out.println("Agent tests: " + passed + " passed, " + failed + " failed");
         Files.writeString(outputDirectory.resolve("result.json"), Json.object("passed", passed, "failed", failed));
         if (failed != 0) System.exit(1);
@@ -208,6 +221,94 @@ public final class AgentTests {
                 if (Files.exists(pidPath)) ProcessHandle.of(Long.parseLong(Files.readString(pidPath))).ifPresent(ProcessHandle::destroyForcibly);
             }
         }
+    }
+
+    private static void bindAddressConfig() throws Exception {
+        Properties properties = new Properties();
+        equal("0.0.0.0", AgentConfig.bindAddress(properties, Map.of()));
+        equal("0.0.0.0", config(true, false, "sample", "sample").bindAddress());
+        properties.setProperty("server.bind-address", "127.0.0.2");
+        equal("127.0.0.2", AgentConfig.bindAddress(properties, Map.of()));
+        equal("127.0.0.1", AgentConfig.bindAddress(properties, Map.of("ARGUS_AGENT_BIND_ADDRESS", "127.0.0.1")));
+        equal("::1", AgentConfig.bindAddress(properties, Map.of("ARGUS_AGENT_BIND_ADDRESS", "::1")));
+        for (String invalid : List.of("", " ", "localhost", "127.1", "999.0.0.1", "127.0.0.1:8090", "http://127.0.0.1", "[::1]", "bad-address")) {
+            try {
+                AgentConfig.bindAddress(properties, Map.of("ARGUS_AGENT_BIND_ADDRESS", invalid));
+                throw new AssertionError("invalid binding accepted: " + invalid);
+            } catch (IllegalArgumentException expected) {
+                require(expected.getMessage().contains("server.bind-address"), "binding error not identified");
+            }
+        }
+        properties.setProperty("server.bind-address", "");
+        try { AgentConfig.bindAddress(properties, Map.of()); throw new AssertionError("empty property accepted"); }
+        catch (IllegalArgumentException expected) { /* 不退回全接口。 */ }
+        Path configFile = Files.createTempFile(outputDirectory.resolve("tmp"), "bind-config-", ".properties");
+        Files.writeString(configFile, "server.bind-address=127.0.0.1\nexecutor.mock=true\n");
+        equal("127.0.0.1", AgentConfig.load(new String[]{"--config=" + configFile}).bindAddress());
+        Path unusedDirectory = outputDirectory.resolve("invalid-bind-" + System.nanoTime());
+        try { boundConfig(0, "", unusedDirectory, true, 2); throw new AssertionError("constructor accepted empty binding"); }
+        catch (IllegalArgumentException expected) { require(!Files.exists(unusedDirectory), "invalid config created an Inbox"); }
+    }
+
+    private static AgentConfig boundConfig(int port, String bindAddress, Path directory, boolean explicit, int httpThreads) {
+        return new AgentConfig(port, "bind-test", "bind-test", TOKEN, true, "never-call-docker", "sample", "sample",
+                2, 1, 4096, httpThreads, false, false, "", 1048576, 1,
+                "", Set.of(), directory, 100, explicit, bindAddress);
+    }
+
+    private static void loopbackBinding() throws Exception {
+        AgentConfig config = boundConfig(0, "127.0.0.1", outputDirectory.resolve("unused-bind-inbox"), false, 2);
+        ByteArrayOutputStream startup = new ByteArrayOutputStream();
+        PrintStream original = System.out;
+        try (AgentServer server = new AgentServer(config, new InstanceService(config, unexpected()), () -> HOST)) {
+            try (PrintStream capture = new PrintStream(startup, true, java.nio.charset.StandardCharsets.UTF_8)) {
+                try { System.setOut(capture); server.start(); } finally { System.setOut(original); }
+            }
+            equal("127.0.0.1", server.listeningAddress().getAddress().getHostAddress());
+            require(server.listeningAddress().getAddress().isLoopbackAddress(), "server bound outside loopback");
+            require(!server.listeningAddress().getAddress().isAnyLocalAddress(), "server silently bound wildcard");
+            equal(200, request(server, "/api/agent/health", true).statusCode());
+            String text = startup.toString(java.nio.charset.StandardCharsets.UTF_8);
+            require(text.contains("http://127.0.0.1:" + server.listeningPort()), "startup address does not match socket");
+            require(!text.contains("0.0.0.0"), "startup log still hard-codes wildcard");
+        } finally { System.setOut(original); }
+    }
+
+    private static void bindFailureReleasesInbox() throws Exception {
+        Path directory = Files.createTempDirectory(outputDirectory.resolve("tmp"), "bind-conflict-");
+        try (ServerSocket occupied = new ServerSocket()) {
+            occupied.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
+            AgentConfig rejectedConfig = boundConfig(occupied.getLocalPort(), "127.0.0.1", directory, true, 2);
+            AgentServer rejected = new AgentServer(rejectedConfig);
+            try {
+                try { rejected.start(); throw new AssertionError("occupied port was accepted"); }
+                catch (IOException expected) { /* 失败必须自行释放 Inbox，不依赖 finally 的显式 close。 */ }
+                try (AgentServer reopened = new AgentServer(boundConfig(0, "127.0.0.1", directory, true, 2))) {
+                    reopened.start(); equal(200, request(reopened, "/api/agent/health", true).statusCode());
+                }
+                require(!occupied.isClosed(), "startup cleanup closed another owner's socket");
+            } finally { rejected.close(); }
+        }
+    }
+
+    private static void partialStartupCleanup() throws Exception {
+        Path directory = Files.createTempDirectory(outputDirectory.resolve("tmp"), "bind-partial-");
+        int port;
+        try (ServerSocket reservation = new ServerSocket()) {
+            reservation.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0)); port = reservation.getLocalPort();
+        }
+        // HTTP 初始化失败仍须释放 Inbox；执行器应在占用端口之前构造完成。
+        AgentServer rejected = new AgentServer(boundConfig(port, "127.0.0.1", directory, true, 0));
+        try {
+            try { rejected.start(); throw new AssertionError("invalid executor accepted"); }
+            catch (IllegalArgumentException expected) { /* 端口与 Inbox 都应释放。 */ }
+            try (ServerSocket rebound = new ServerSocket()) {
+                rebound.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port));
+                try (AgentServer reopened = new AgentServer(boundConfig(0, "127.0.0.1", directory, true, 2))) {
+                    reopened.start(); equal(200, request(reopened, "/api/agent/health", true).statusCode());
+                }
+            }
+        } finally { rejected.close(); }
     }
 
     private static void realModeRequiresToken() throws Exception {

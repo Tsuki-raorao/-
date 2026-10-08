@@ -43,19 +43,28 @@ public final class AgentServer implements AutoCloseable {
         this.tasks = new TaskService(instances, config);
     }
     public void start() throws IOException {
-        try { server = HttpServer.create(new InetSocketAddress(config.port()), 0); }
-        catch (IOException failure) { tasks.close(); throw failure; }
-        // 队列满时由提交请求的调度线程执行，让接收侧背压；不静默丢弃已接受的连接。
-        // 这限制了待执行队列，但慢客户端仍可能占用线程，不等同于完整流量防护。
-        httpExecutor = new ThreadPoolExecutor(config.maxHttpThreads(), config.maxHttpThreads(), 0L, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<>(config.maxHttpQueueSize()), new ThreadPoolExecutor.CallerRunsPolicy());
-        server.createContext("/", this::handle); server.setExecutor(httpExecutor); server.start();
-        tasks.start();
-        System.out.println("Argus Agent " + config.nodeId() + " listening on http://0.0.0.0:" + server.getAddress().getPort() + " (mock=" + config.mock() + ")");
-        shutdownHook = new Thread(this::close, "argus-agent-shutdown");
-        Runtime.getRuntime().addShutdownHook(shutdownHook);
+        try {
+            // 队列满时由提交请求的调度线程执行，让接收侧背压；不静默丢弃已接受的连接。
+            // 这限制了待执行队列，但慢客户端仍可能占用线程，不等同于完整流量防护。
+            httpExecutor = new ThreadPoolExecutor(config.maxHttpThreads(), config.maxHttpThreads(), 0L, TimeUnit.MILLISECONDS,
+                    new ArrayBlockingQueue<>(config.maxHttpQueueSize()), new ThreadPoolExecutor.CallerRunsPolicy());
+            // JDK HttpServer 尚未 start 时 stop 不保证释放已绑定端口，因此先完成可校验的执行器构造。
+            server = HttpServer.create(new InetSocketAddress(config.bindAddress(), config.port()), 0);
+            server.createContext("/", this::handle); server.setExecutor(httpExecutor); server.start();
+            tasks.start();
+            String host = server.getAddress().getAddress().getHostAddress();
+            if (host.contains(":")) host = "[" + host + "]";
+            System.out.println("Argus Agent " + config.nodeId() + " listening on http://" + host + ":" + server.getAddress().getPort() + " (mock=" + config.mock() + ")");
+            shutdownHook = new Thread(this::close, "argus-agent-shutdown");
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
+        } catch (IOException | RuntimeException failure) {
+            // 包括地址不属于本机、端口占用及初始化异常；不能留下 Inbox 锁或半启动 HTTP 服务。
+            try { close(); } catch (RuntimeException cleanupFailure) { failure.addSuppressed(cleanupFailure); }
+            throw failure;
+        }
     }
     int listeningPort() { return server.getAddress().getPort(); }
+    InetSocketAddress listeningAddress() { return server.getAddress(); }
     @Override public void close() {
         if (server != null) server.stop(0);
         if (httpExecutor != null) httpExecutor.shutdownNow();
@@ -138,7 +147,7 @@ public final class AgentServer implements AutoCloseable {
     }
     private boolean secureEquals(String expected, String actual) { return actual != null && java.security.MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8), actual.getBytes(StandardCharsets.UTF_8)); }
     private String nodeJson() { NodeInfo n = new NodeInfo(config.nodeId(), config.nodeName(), "ONLINE", "0.1.0", advertisedHost(), config.port(), startedAt); return Json.object("nodeId", n.nodeId(), "name", n.name(), "status", n.status(), "agentVersion", n.agentVersion(), "host", n.host(), "port", n.port(), "startedAt", n.startedAtEpochMs(), "capabilities", capabilities()); }
-    private String advertisedHost() { return config.advertisedHost().isBlank() ? "0.0.0.0" : config.advertisedHost(); }
+    private String advertisedHost() { return config.advertisedHost().isBlank() ? config.bindAddress() : config.advertisedHost(); }
     /** 当前 Agent 暴露的能力清单；列表是只读能力，控制能力仍由 control.enabled 单独保护。 */
     private Json.Raw capabilities() { return Json.raw("[\"read_health\",\"read_instances\",\"read_logs\",\"read_metrics\"]"); }
     private String instancesJson(List<InstanceStatus> values) { List<String> json = new ArrayList<>(); for (InstanceStatus x : values) json.add(instanceJson(x)); return "[" + String.join(",", json) + "]"; }

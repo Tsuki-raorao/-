@@ -4,6 +4,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
+# 用户、目录和 JAR 名称均为示例；核对现有部署，不按模板搬迁服务。
 Type=simple
 User=argus
 Group=argus
@@ -16,6 +17,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=true
+# 启动前创建并授予服务用户所需权限；此目录不是 Nginx 静态站点目录。
 ReadWritePaths=/opt/argus/backend/data
 SuccessExitStatus=143
 

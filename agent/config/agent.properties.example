@@ -2,6 +2,9 @@
 # 建议复制为 deployment/agent.properties，密钥通过 ARGUS_AGENT_AUTH_TOKEN 注入。
 
 server.port=8090
+# 实际监听地址，仅支持 IPv4/IPv6 字面量；隔离验证用 127.0.0.1，空/无效值拒绝启动。
+# 默认保留全接口兼容性；node.advertised-host 只描述访问入口，不控制监听范围。
+server.bind-address=0.0.0.0
 server.max-http-threads=16
 # 有界 HTTP 等待队列；满时调度线程参与执行并形成接收背压，不丢弃已接受请求。
 server.max-http-queue=64
