@@ -15,15 +15,22 @@ public class Node {
     /** 最近一次心跳时间；从未收到心跳时为 null。 */
     private Instant lastHeartbeat;
     /** Agent 最近上报的主机 CPU 百分比。 */
-    private double cpuPercent;
+    private Double cpuPercent;
     /** Agent 最近上报的主机已用内存字节数。 */
-    private long memoryBytes;
+    private Long memoryBytes;
     /** Agent 最近上报的主机内存总字节数。 */
-    private long memoryTotalBytes;
+    private Long memoryTotalBytes;
+    private Instant lastCheckedAt;
+    private Instant lastSuccessfulSyncAt;
+    private SyncStatus syncStatus = SyncStatus.UNKNOWN;
+    private String syncErrorCode;
+    private String dataSource = "UNKNOWN";
+    private Instant sampledAt;
+    private MetricsStatus metricsStatus = MetricsStatus.UNKNOWN;
 
     public Node() { }
     public Node(String id, String name, String address, NodeStatus status, Instant lastHeartbeat) {
-        this(id, name, address, status, lastHeartbeat, 0, 0, 0);
+        this.id = id; this.name = name; this.address = address; this.status = status; this.lastHeartbeat = lastHeartbeat;
     }
     public Node(String id, String name, String address, NodeStatus status, Instant lastHeartbeat,
                 double cpuPercent, long memoryBytes, long memoryTotalBytes) {
@@ -40,10 +47,24 @@ public class Node {
     public void setStatus(NodeStatus status) { this.status = status; }
     public Instant getLastHeartbeat() { return lastHeartbeat; }
     public void setLastHeartbeat(Instant lastHeartbeat) { this.lastHeartbeat = lastHeartbeat; }
-    public double getCpuPercent() { return cpuPercent; }
-    public void setCpuPercent(double cpuPercent) { this.cpuPercent = Math.max(0, cpuPercent); }
-    public long getMemoryBytes() { return memoryBytes; }
-    public void setMemoryBytes(long memoryBytes) { this.memoryBytes = Math.max(0, memoryBytes); }
-    public long getMemoryTotalBytes() { return memoryTotalBytes; }
-    public void setMemoryTotalBytes(long memoryTotalBytes) { this.memoryTotalBytes = Math.max(0, memoryTotalBytes); }
+    public Double getCpuPercent() { return cpuPercent; }
+    public void setCpuPercent(Double value) { this.cpuPercent = value; }
+    public Long getMemoryBytes() { return memoryBytes; }
+    public void setMemoryBytes(Long value) { this.memoryBytes = value; }
+    public Long getMemoryTotalBytes() { return memoryTotalBytes; }
+    public void setMemoryTotalBytes(Long value) { this.memoryTotalBytes = value; }
+    public Instant getLastCheckedAt() { return lastCheckedAt; }
+    public void setLastCheckedAt(Instant value) { this.lastCheckedAt = value; }
+    public Instant getLastSuccessfulSyncAt() { return lastSuccessfulSyncAt; }
+    public void setLastSuccessfulSyncAt(Instant value) { this.lastSuccessfulSyncAt = value; }
+    public SyncStatus getSyncStatus() { return syncStatus; }
+    public void setSyncStatus(SyncStatus value) { this.syncStatus = value; }
+    public String getSyncErrorCode() { return syncErrorCode; }
+    public void setSyncErrorCode(String value) { this.syncErrorCode = value; }
+    public String getDataSource() { return dataSource; }
+    public void setDataSource(String value) { this.dataSource = value; }
+    public Instant getSampledAt() { return sampledAt; }
+    public void setSampledAt(Instant value) { this.sampledAt = value; }
+    public MetricsStatus getMetricsStatus() { return metricsStatus; }
+    public void setMetricsStatus(MetricsStatus value) { this.metricsStatus = value; }
 }

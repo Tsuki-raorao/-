@@ -1,64 +1,66 @@
 # Agent 可靠性与部署说明
 
-本文说明 Agent 当前实现的安全边界、配置变量和本地备份方式。它只描述项目配置，不会自动连接或修改任何服务器。
+更新：2026-10-08。本文描述当前 Java 17 Agent 的实现与配置，本轮仅本地开发验证，未发布到真实服务器。
 
-## 当前保护措施
+## 已有保护与边界
 
-1. **默认 mock 执行**：仓库中的 `agent/config/agent.properties` 使用 `executor.mock=true`，本地启动不会调用 Docker。真实环境必须显式设置 `ARGUS_AGENT_MOCK=false`，并先确认 Docker 权限和实例白名单。
-2. **任务并发上限**：`executor.max-concurrent-tasks` 默认 4，任务等待队列最多为并发数的 4 倍。队列满时返回 HTTP 429，调用方应稍后重试，避免无限创建线程。
-3. **HTTP 线程上限**：`server.max-http-threads` 默认 16，避免突发请求创建无限线程。
-4. **请求体上限**：`server.max-request-bytes` 默认 65536 字节；超大请求会被拒绝，降低内存耗尽风险。
-5. **Docker 命令超时**：`executor.timeout-seconds` 默认 30 秒。超时会强制结束子进程并返回失败状态。
-6. **动作白名单和实例名校验**：仅允许 `start`、`stop`、`restart`，实例名只能包含字母、数字、点、下划线和短横线。
-7. **远程控制开关**：`control.enabled` 默认 false；只读健康、实例和日志接口不受影响，但提交 start/stop/restart 会返回 `403 control_disabled`。
-8. **容器自动发现**：真实模式默认执行只读 `docker ps -a`，展示节点上的全部容器；随后尝试只读 `docker stats --no-stream` 采集 CPU、内存瞬时值。stats 失败时不影响生命周期状态，资源值保持 0；日志和状态查询只允许访问已发现的容器名，避免把任意字符串当作 Docker 目标。
-9. **节点可达地址**：`node.advertised-host` 用于注册信息，不能填写 `0.0.0.0`；控制中心应使用云安全组允许的实际地址。
+| 机制 | 当前实现 | 尚不能据此承诺 |
+|---|---|---|
+| 默认安全开关 | 仓库配置 mock，远程动作默认关闭；真实模式无令牌拒绝启动 | 不代替完整用户权限和 Agent 操作审计 |
+| 任务执行 | start/stop/restart 白名单、实例名校验、参数数组，不经过 shell | 中央尚不下发任务，Agent 任务内存保存，无幂等恢复 |
+| 命令输出 | 等待退出期间持续排空输出；超限/超时/中断清理进程 | 大量日志不是无限可读，超限是失败，不能使用截断清单 |
+| HTTP | 固定工作线程和有界等待队列，请求体有上限 | 慢客户端仍占线程，尚无容量结论或完整连接层防护 |
+| 采集 | 协议 1.1、来源、采样时间、可空指标、指标可用状态 | 尚无业务 Adapter 注册，玩家数/TPS 未采集 |
+| 网关 | 目标白名单、令牌、连接/读取超时，只允许指定 GET 路径 | 不提供通用代理、SSH 或 shell |
 
-## 配置变量
+任务队列满返回 429。HTTP 队列满采用 `CallerRunsPolicy`，由 JDK 调度线程执行一项请求形成背压，实际最多为配置工作线程加一个调度线程；它不是 HTTP 429 限流。关闭服务先关闭 HTTP 连接，再终止执行器，不能靠静默丢弃请求拒绝连接。
 
-| 变量 | 文件配置 | 默认值 | 用途 |
-|---|---|---:|---|
-| `ARGUS_AGENT_PORT` | `server.port` | `8090` | Agent HTTP 端口 |
-| `ARGUS_AGENT_NODE_ID` | `node.id` | 随机值 | 节点唯一标识 |
-| `ARGUS_AGENT_NODE_NAME` | `node.name` | 节点 ID | 展示名称 |
-| `ARGUS_AGENT_AUTH_TOKEN` | `auth.token` | 空 | Bearer 认证令牌；生产环境必须使用环境变量 |
-| `ARGUS_AGENT_MOCK` | `executor.mock` | `true` | 是否使用模拟执行器 |
-| `ARGUS_AGENT_DOCKER` | `docker.executable` | `docker` | Docker 可执行文件路径 |
-| `ARGUS_AGENT_MAX_TASKS` | `executor.max-concurrent-tasks` | `4` | 同时执行的任务数，范围 1–64 |
-| `ARGUS_AGENT_MAX_REQUEST_BYTES` | `server.max-request-bytes` | `65536` | 单次请求体上限，范围 1 KiB–1 MiB |
-| `ARGUS_AGENT_MAX_HTTP_THREADS` | `server.max-http-threads` | `16` | HTTP 工作线程数，范围 2–128 |
-| `ARGUS_AGENT_CONTROL_ENABLED` | `control.enabled` | `false` | 是否允许远程 start/stop/restart；完成备份、审计和权限配置后才开启 |
-| `ARGUS_AGENT_DISCOVERY` | `instance.discovery` | `true` | 真实模式是否自动读取 `docker ps -a` |
-| `ARGUS_AGENT_ADVERTISED_HOST` | `node.advertised-host` | 空 | 注册给控制中心的可达主机地址 |
+## 配置
 
-文件配置用于非敏感项。`auth.token` 不要写入 Git、备份包或日志；生产部署通过环境变量注入，并由外层防火墙或反向代理限制来源。
+环境变量优先于配置文件。文件模板只保存非敏感值，真实令牌由仓库外受限运行配置注入。
 
-## 推荐部署顺序
+| 环境变量 | 文件键 | 默认 / 范围 |
+|---|---|---|
+| `ARGUS_AGENT_PORT` | `server.port` | 8090 |
+| `ARGUS_AGENT_NODE_ID` / `ARGUS_AGENT_NODE_NAME` | `node.id` / `node.name` | 应显式设置稳定 ID；未配置 ID 时自动生成 |
+| `ARGUS_AGENT_AUTH_TOKEN` | `auth.token` | 空；真实模式必须提供 |
+| `ARGUS_AGENT_MOCK` | `executor.mock` | true |
+| `ARGUS_AGENT_CONTROL_ENABLED` | `control.enabled` | false |
+| `ARGUS_AGENT_DISCOVERY` | `instance.discovery` | 配置类默认 true，仓库本地文件为 false |
+| `ARGUS_AGENT_DOCKER` | `docker.executable` | docker |
+| `ARGUS_AGENT_ADVERTISED_HOST` | `node.advertised-host` | 节点展示的可达入口，私有配置维护 |
+| `ARGUS_AGENT_MAX_TASKS` | `executor.max-concurrent-tasks` | 4；1–64，任务等待队列为并发数的 4 倍 |
+| `ARGUS_AGENT_MAX_REQUEST_BYTES` | `server.max-request-bytes` | 65536；1 KiB–1 MiB |
+| `ARGUS_AGENT_MAX_HTTP_THREADS` | `server.max-http-threads` | 16；2–128 |
+| `ARGUS_AGENT_MAX_HTTP_QUEUE` | `server.max-http-queue` | 64；1–1024 |
+| `ARGUS_AGENT_MAX_COMMAND_OUTPUT_BYTES` | `executor.max-output-bytes` | 1 MiB；1 KiB–16 MiB |
+| 无独立环境变量 | `executor.timeout-seconds` | 30 秒；1–600 |
 
-1. 复制 `agent/config/agent.properties.example` 到部署目录，填写节点 ID、实例名和非敏感参数。
-2. 使用 `ARGUS_AGENT_AUTH_TOKEN` 注入令牌，先保持 `ARGUS_AGENT_MOCK=true` 做连通性检查。
-3. 验证 `/api/agent/health`、`/api/agent/instances` 和任务查询接口。
-4. 只有在确认容器名、Docker 权限、命令超时和回滚方案后，才设置 `ARGUS_AGENT_MOCK=false`。
-5. 改配置或升级前运行 `scripts/backup-project-state.ps1` 保存项目配置快照；服务器容器变更需要另外在服务器侧执行备份和回滚，不由本项目脚本自动操作。
+真实模式中，发现成功为空返回空数组，发现失败返回明确 503 错误；stats 失败保留生命周期但指标为 null。单实例配置中 `instance.id` 可与 `instance.container` 不同，采集按真实容器名匹配。缺失指标不伪造 0，`/metrics` 省略不可用值并暴露可用性标记。
 
-部署原则：需要采集的业务节点单独安装 Agent，令牌通过受限运行配置注入，管理端口只允许控制中心来源。初始部署保持 `control.enabled=false`，具体节点列表和网络规则由部署者在私有运维资料中维护。
+## 与控制中心配合
 
-## 故障处理
+Agent 目前没有主动注册或定时心跳上报。中央网关默认关闭；启用后每轮完成等待 60 秒读取 health/instances，完整校验成功后事务保存。中央实例 ID 与 Agent 局部 ID 分离；网页最近日志由中央 ID 解析正确节点和局部 ID。
 
-- HTTP 429：任务队列已满，等待已有任务完成后重试，不要循环高速提交。
-- `UNKNOWN`：Agent 无法在超时时间内获得容器状态；检查 Docker 权限、容器名称和磁盘空间。
-- Agent 进程重启：当前任务状态只保存在内存中，重启后丢失，控制中心尚无已完成的恢复编排；生产版需要 Inbox/Outbox 和持久化任务尝试记录。
-- 认证失败：检查令牌是否通过环境变量注入，避免把令牌直接写进配置文件或命令历史。
+`lastCheckedAt` 记录尝试，`lastSuccessfulSyncAt` 记录完整成功批次，实例同批 `lastSeenAt` 与其相等。失败、部分同步、过期或本轮未发现不会被网页当作新鲜状态。HTTP/格式失败保留历史观测，合法空清单不删除历史实例。
 
-## 本地验证
+## 部署前步骤
+
+1. 复现本地测试，固定 Agent/后端/前端版本；核对协议与数据库迁移。
+2. 在私有配置中准备稳定节点 ID、匹配令牌、必要网络来源，保持 `control.enabled=false`。
+3. 先以 mock 验证认证、来源标记和日志路由；不得以模拟结果代替真实资源验收。
+4. 真实只读采集前确认 Docker 权限、允许实例、命令输出上限和网络边界；关闭 mock 不等于开放远程动作。
+5. 发布前备份产物、运行配置与数据库，在独立环境验证 V4；MySQL DDL 失败不能假定自动整体回滚。
+6. 只读采集发布验收独立于业务容器维护，不顺带启停或替换业务服务。
+
+现有任务不持久化、权限审计不完整，当前阶段继续保持真实控制关闭。systemd/Nginx 仅提供模板；实际节点、凭据和备份位置保存在私有运维资料中。
+
+## 测试与故障定位
 
 ```powershell
-.\scripts\start-agent.ps1
-.\scripts\check-local-stack.ps1 -SkipFrontend
+.\scripts\test-agent.ps1
 ```
 
-脚本默认只访问本机 `localhost`。它们不会连接用户的云服务器。
+2026-10-08 已通过 23 项 Java 检查和独立 PowerShell JSON 解析，覆盖 null/0、来源、空/失败发现、别名、授权、指标语义、大输出、超限/超时、HTTP 突发和关闭。测试使用本机 HTTP、注入的模拟 Docker 与 Java 测试子进程，没有调用真实 Docker 或远程服务器。跨模块结果见 [开发进度](开发进度.md)。
 
-## 生产启动保护
-
-真实模式（`executor.mock=false`）启动时必须提供 `ARGUS_AGENT_AUTH_TOKEN` 或 `auth.token`；当前代码在令牌为空时直接拒绝启动，避免误把 8090 的状态接口暴露给公网。生产 systemd 环境应把令牌放在权限为 `0600` 的独立 EnvironmentFile 中，不要写入项目配置、日志或备份。
+故障应分别定位：401 检查运行令牌；503 发现失败检查受控错误码；任务 429 代表等待队列满；快照 PARTIAL 代表健康成功但完整同步未完成。Agent 重启丢失内存任务是已知限制，不应报告为已具备恢复能力。日志和错误记录只保存必要脱敏信息。

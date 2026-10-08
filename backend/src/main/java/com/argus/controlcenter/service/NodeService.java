@@ -25,12 +25,17 @@ public class NodeService {
     public List<Node> findAll() { return repository.findAll(); }
     public Node findById(String id) { return repository.findById(id).orElseThrow(() -> new NotFoundException("node not found: " + id)); }
     public Node create(CreateNodeRequest request) { return repository.save(new Node(UUID.randomUUID().toString(), request.getName(), request.getAddress(), NodeStatus.UNKNOWN, null)); }
-    public Node heartbeat(String id, NodeStatus status) { Node n=findById(id); n.setStatus(status == null ? NodeStatus.ONLINE : status); n.setLastHeartbeat(Instant.now()); return repository.save(n); }
+    public Node heartbeat(String id, NodeStatus status) {
+        Node n = findById(id);
+        n.setStatus(status == null ? NodeStatus.ONLINE : status);
+        if (n.getStatus() == NodeStatus.ONLINE) n.setLastHeartbeat(Instant.now());
+        return repository.save(n);
+    }
     /** 保存 Agent 心跳和主机资源快照，资源值由只读同步链路提供。 */
     public Node heartbeat(String id, NodeStatus status, double cpuPercent, long memoryBytes, long memoryTotalBytes) {
         Node n = findById(id);
         n.setStatus(status == null ? NodeStatus.ONLINE : status);
-        n.setLastHeartbeat(Instant.now());
+        if (n.getStatus() == NodeStatus.ONLINE) n.setLastHeartbeat(Instant.now());
         n.setCpuPercent(cpuPercent);
         n.setMemoryBytes(memoryBytes);
         n.setMemoryTotalBytes(memoryTotalBytes);
@@ -40,7 +45,7 @@ public class NodeService {
     /** 删除节点及其实例；生产只读拦截器会在控制器入口阻止未授权请求。 */
     @Transactional
     public void delete(String id) {
-        findById(id);
+        repository.findByIdForUpdate(id).orElseThrow(() -> new NotFoundException("node not found: " + id));
         for (String instanceId : instances.findIdsByNodeId(id)) {
             logs.deleteByInstanceId(instanceId);
             tasks.deleteByInstanceId(instanceId);
@@ -48,5 +53,13 @@ public class NodeService {
         instances.deleteByNodeId(id);
         repository.deleteById(id);
     }
-    public void seed() { if (findAll().isEmpty()) repository.save(new Node("node-local", "Local node", "127.0.0.1", NodeStatus.ONLINE, Instant.now())); }
+    public void seed() {
+        if (findAll().isEmpty()) {
+            Node node = new Node("node-local", "Local node", "127.0.0.1", NodeStatus.ONLINE, Instant.now(), 0, 0, 0);
+            node.setDataSource("MOCK");
+            node.setMetricsStatus(MetricsStatus.AVAILABLE);
+            node.setSampledAt(Instant.now());
+            repository.save(node);
+        }
+    }
 }

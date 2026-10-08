@@ -3,6 +3,8 @@
 
 server.port=8090
 server.max-http-threads=16
+# 有界 HTTP 等待队列；满时调度线程参与执行并形成接收背压，不丢弃已接受请求。
+server.max-http-queue=64
 server.max-request-bytes=65536
 node.id=node-example
 node.name=example-node
@@ -12,6 +14,8 @@ auth.token=
 executor.mock=false
 docker.executable=docker
 executor.timeout-seconds=30
+# 单次命令 stdout/stderr 合并输出的字节上限；超限失败，不返回截断的容器清单。
+executor.max-output-bytes=1048576
 executor.max-concurrent-tasks=4
 # 远程 start/stop/restart 默认关闭；只有完成权限、审计和备份配置后才显式开启。
 control.enabled=false

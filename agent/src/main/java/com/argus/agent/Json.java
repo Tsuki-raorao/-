@@ -14,8 +14,22 @@ public final class Json {
 
     public static String escape(String value) {
         if (value == null) return "";
-        return value.replace("\\", "\\\\").replace("\"", "\\\"")
-                .replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t");
+        StringBuilder out = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '\\' -> out.append("\\\\");
+                case '"' -> out.append("\\\"");
+                case '\n' -> out.append("\\n");
+                case '\r' -> out.append("\\r");
+                case '\t' -> out.append("\\t");
+                default -> {
+                    if (c < 0x20) out.append(String.format("\\u%04x", (int) c));
+                    else out.append(c);
+                }
+            }
+        }
+        return out.toString();
     }
     public static String object(Object... values) {
         StringBuilder b = new StringBuilder("{");
@@ -25,6 +39,9 @@ public final class Json {
             Object value = values[i + 1];
             if (value == null) b.append("null");
             else if (value instanceof Raw raw) b.append(raw.json());
+            // JSON 不支持 NaN/Infinity，异常指标以缺失值表示，不能输出非法 JSON。
+            else if (value instanceof Double d && !Double.isFinite(d)
+                    || value instanceof Float f && !Float.isFinite(f)) b.append("null");
             else if (value instanceof Number || value instanceof Boolean) b.append(value);
             else b.append('"').append(escape(String.valueOf(value))).append('"');
         }

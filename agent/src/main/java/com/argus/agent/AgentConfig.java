@@ -12,7 +12,8 @@ public record AgentConfig(int port, String nodeId, String nodeName, String authT
                           boolean mock, String dockerExecutable, String defaultInstanceId,
                           String defaultContainer, int commandTimeoutSeconds,
                           int maxConcurrentTasks, int maxRequestBytes, int maxHttpThreads,
-                          boolean controlEnabled, boolean discoveryEnabled, String advertisedHost) {
+                          boolean controlEnabled, boolean discoveryEnabled, String advertisedHost,
+                          int maxCommandOutputBytes, int maxHttpQueueSize) {
     public static AgentConfig load(String[] args) throws IOException {
         Properties p = new Properties();
         String configPath = System.getenv().getOrDefault("ARGUS_AGENT_CONFIG", "agent/config/agent.properties");
@@ -42,7 +43,11 @@ public record AgentConfig(int port, String nodeId, String nodeName, String authT
                 maxTasks, maxRequestBytes, maxHttpThreads,
                 Boolean.parseBoolean(envOr(p, "ARGUS_AGENT_CONTROL_ENABLED", "control.enabled", "false")),
                 Boolean.parseBoolean(envOr(p, "ARGUS_AGENT_DISCOVERY", "instance.discovery", "true")),
-                envOr(p, "ARGUS_AGENT_ADVERTISED_HOST", "node.advertised-host", ""));
+                envOr(p, "ARGUS_AGENT_ADVERTISED_HOST", "node.advertised-host", ""),
+                positiveInt(envOr(p, "ARGUS_AGENT_MAX_COMMAND_OUTPUT_BYTES", "executor.max-output-bytes", "1048576"),
+                        "executor.max-output-bytes", 1024, 16777216),
+                positiveInt(envOr(p, "ARGUS_AGENT_MAX_HTTP_QUEUE", "server.max-http-queue", "64"),
+                        "server.max-http-queue", 1, 1024));
     }
 
     private static String envOr(Properties p, String env, String key, String fallback) {

@@ -20,5 +20,14 @@ public class InstanceService {
         instance.setStatus(normalized.equals("STOP") ? InstanceStatus.STOPPED : InstanceStatus.RUNNING); instance.setUpdatedAt(Instant.now()); return repository.save(instance);
     }
     public long count() { return repository.count(); }
-    public void seed() { if (findAll().isEmpty()) repository.save(new Instance("mc01", "零壹", "node-local", "mc01", "1.21.1-NeoForge", InstanceStatus.RUNNING, Instant.now())); }
+    public void seed() {
+        if (findAll().isEmpty()) {
+            Instance value = new Instance("mc01", "零壹", "node-local", "mc01", "1.21.1-NeoForge", InstanceStatus.RUNNING, Instant.now(), 0, 0, 0);
+            value.setDataSource("MOCK");
+            value.setMetricsStatus(MetricsStatus.AVAILABLE);
+            value.setSampledAt(Instant.now());
+            value.setLastSeenAt(Instant.now());
+            repository.save(value);
+        }
+    }
 }

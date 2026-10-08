@@ -1,20 +1,16 @@
 # Argus 控制台
 
-Vue 3 + Vite + TypeScript 实现的 Argus 管理控制台，提供概览、节点、实例、任务和日志五个页面。当前日志查询读取后端数据库，尚未接通实时容器日志；任务执行尚未形成真实控制闭环。
+Vue 3 + TypeScript + Vite 管理台，提供概览、节点、实例、任务记录和 Agent 最近日志五个页面。页面显示采集来源、时间、缺失指标与旧快照；真实容器任务执行仍未接通。
 
-## 本地运行
-
-```bash
+```powershell
 npm install
+npm test
+npm run build
 npm run dev
 ```
 
-生产构建：`npm run build`。
+开发服务器默认将 `/api` 代理到 `http://localhost:8080`。前端解包 `{ code, message, data }`；开发与生产请求失败都不会自动切换成演示成功。后端返回的 `MOCK` 数据会明确标注为模拟。
 
-Vite 开发服务器默认将 `/api` 代理到 `http://localhost:8080`。接口路径遵循项目 `docs/API.md`：`GET /api/nodes`、`GET /api/instances`、`POST /api/instances/{instanceId}/actions`、`GET /api/tasks`、`GET /api/logs?instanceId=...&limit=...`。
+页面使用 hash 路由，默认每 15 秒刷新；快照超过 180 秒标为旧快照。日志页按中央实例 ID 调用 `GET /api/instances/{controlId}/logs?limit=100`，选择器区分同名容器的所属节点。日志是按需/轮询读取，未使用 WebSocket，也不混用旧数据库日志接口。
 
-后端接口返回 `{ code, message, data }` 时前端应读取 `data`；开发阶段后端不可用时，页面自动切换到内置 mock 数据，保证可以独立预览。状态值兼容后端的大写枚举（如 `ONLINE`、`RUNNING`、`SUCCEEDED`）。
-
-页面使用 hash 路由（例如 `/#/nodes`），因此直接刷新页面不需要额外配置服务端 history fallback。控制台默认每 15 秒刷新一次数据，日志页可用“自动刷新”复选框关闭轮询；轮询刷新不等于已接通实时日志。
-
-详细的接口字段、页面状态、构建检查和常见问题见 [前端开发说明](../docs/前端开发说明.md)。
+详见 [前端开发说明](../docs/前端开发说明.md)；其中记录字段、访问保护、行为测试和当前限制。
