@@ -1,4 +1,4 @@
-param()
+﻿param()
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $agentRoot = Join-Path $projectRoot 'agent'
@@ -8,9 +8,9 @@ New-Item -ItemType Directory -Force -Path $testOutput, $testTemp | Out-Null
 
 # 只使用已安装的 JDK；所有测试产物、子进程和临时文件留在项目内。
 $sourcePaths = @(
-    Get-ChildItem -LiteralPath (Join-Path $agentRoot 'src/main/java') -Recurse -Filter '*.java'
-    Get-ChildItem -LiteralPath (Join-Path $agentRoot 'src/test/java') -Recurse -Filter '*.java'
-) | ForEach-Object FullName
+    (Get-ChildItem -LiteralPath (Join-Path $agentRoot 'src/main/java') -Recurse -Filter '*.java').FullName;
+    (Get-ChildItem -LiteralPath (Join-Path $agentRoot 'src/test/java') -Recurse -Filter '*.java').FullName
+)
 & javac "-J-Djava.io.tmpdir=$testTemp" --release 17 -encoding UTF-8 -d $testOutput @sourcePaths
 if ($LASTEXITCODE -ne 0) { throw 'Agent 测试编译失败。' }
 & java "-Djava.io.tmpdir=$testTemp" -cp $testOutput com.argus.agent.AgentTests $testOutput
