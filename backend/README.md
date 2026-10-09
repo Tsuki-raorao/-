@@ -10,7 +10,7 @@
 
 ## 运行
 
-需要 JDK 17 和 Maven 3.9+。默认使用本地 H2 文件数据库 `./data/argus`，首次启动由 Flyway 执行 V1 至 V6 迁移：
+需要 JDK 17 和 Maven 3.9+。默认使用本地 H2 文件数据库 `./data/argus`，首次启动由 Flyway 执行 V1 至 V8 迁移：
 
 ```bash
 mvn spring-boot:run
