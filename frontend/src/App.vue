@@ -8,12 +8,13 @@ import { createTaskReader, type TaskDetailState } from './task-detail'
 import InstanceTable from './components/InstanceTable.vue'
 import TaskDetail from './components/TaskDetail.vue'
 import TaskResolution from './components/TaskResolution.vue'
+import ProjectAccess from './components/ProjectAccess.vue'
 import { readReviewIntent } from './task-resolution'
 import { authSession, type AuthState } from './auth-session'
 import { clearLegacySecrets, recoveryScope, scopedIntentStorage, readRecovery } from './scoped-recovery'
 
-type Page = 'overview' | 'nodes' | 'instances' | 'tasks' | 'logs'
-const nav = [{ id: 'overview', label: '概览', icon: '◈' }, { id: 'nodes', label: '节点', icon: '⌘' }, { id: 'instances', label: '实例', icon: '▣' }, { id: 'tasks', label: '任务', icon: '✓' }, { id: 'logs', label: '日志', icon: '≡' }] as const
+type Page = 'overview' | 'nodes' | 'instances' | 'tasks' | 'logs' | 'access'
+const nav = [{ id: 'overview', label: '概览', icon: '◈' }, { id: 'nodes', label: '节点', icon: '⌘' }, { id: 'instances', label: '实例', icon: '▣' }, { id: 'tasks', label: '任务', icon: '✓' }, { id: 'logs', label: '日志', icon: '≡' }, { id: 'access', label: '成员权限', icon: '♙' }] as const
 const page = ref<Page>(readPage())
 const nodes = ref<NodeItem[]>([])
 const instances = ref<Instance[]>([])
@@ -269,6 +270,13 @@ function selectProject(id: string) {
   catch (error) { notice.value = error instanceof Error ? error.message : '项目切换失败' }
 }
 function changeProject(event: Event) { selectProject((event.target as HTMLSelectElement).value) }
+async function refreshProjects() {
+  try {
+    const projects = await api.authProjects()
+    authSession.setProjects(projects)
+  } catch (error) { notice.value = error instanceof Error ? error.message : '项目权限刷新失败' }
+}
+function accessChanged() { void refreshProjects(); if (page.value === 'access') void load() }
 
 function actionReason(instance: Instance, action: TaskAction): string {
   if (loading.value || !connected.value) return '控制中心状态尚未验证'
@@ -368,7 +376,7 @@ onUnmounted(() => {
     <aside class="sidebar" :inert="Boolean(confirmation)">
       <div class="brand"><img class="brand-logo" src="/logo.png?v=20261007" alt="未序 Logo" /><small>智能运维控制台</small></div>
       <div class="workspace"><span :class="['dot', connected ? 'online' : 'offline']"></span><div><small>当前工作区</small><strong>我的服务器</strong></div></div>
-      <nav><button v-for="item in nav" :key="item.id" :class="{ active: page === item.id }" @click="go(item.id)"><span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>{{ item.label }}</button></nav>
+      <nav><template v-for="item in nav" :key="item.id"><button v-if="item.id !== 'access' || identityMode" :class="{ active: page === item.id }" @click="go(item.id)"><span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>{{ item.label }}</button></template></nav>
       <div class="sidebar-bottom"><div class="profile"><img class="avatar avatar-image" src="/weixu-niang.png" alt="未序娘" /><div><b>未序娘</b><small>形象展示 · AI 尚未接入</small></div></div></div>
     </aside>
     <main class="main" :inert="Boolean(confirmation)">
@@ -440,6 +448,10 @@ onUnmounted(() => {
               <div v-else class="log-lines"><div v-for="(line, index) in filteredLogs" :key="index" class="log-line"><span>{{ line }}</span></div></div>
             </div>
           </section>
+        </template>
+        <template v-else-if="page === 'access'">
+          <ProjectAccess v-if="identityMode && authState.phase === 'ready'" :project="authState.project" :read-only="readOnly || Boolean(authState.config?.readOnly)" @changed="accessChanged" />
+          <section v-else class="panel full"><div class="empty-state">成员权限页面需要登录并选择项目。</div></section>
         </template>
       </div>
     </main>

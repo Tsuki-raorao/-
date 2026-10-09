@@ -18,6 +18,7 @@ const evidence = ref<ReviewEvidence | null>(null)
 const reading = ref(false), readingEvidence = ref(false), ready = ref(false)
 const error = ref(''), evidenceError = ref(''), notice = ref('')
 const reason = ref(''), manualEvidence = ref(''), noReplay = ref(false), residualRisk = ref(false)
+const adoptionReason = ref(''), adoptionNoReplay = ref(false), adoptionResidualRisk = ref(false), adopting = ref(false)
 const intentState = ref<ReviewIntentState>({ phase: 'idle', intent: null, error: '' })
 let generation = 0, evidenceGeneration = 0, alive = true
 let controller: AbortController | undefined, evidenceController: AbortController | undefined, timer: number | undefined
@@ -36,6 +37,10 @@ const canRecheck = computed(() => ready.value && !reading.value && !props.readOn
   && caps.value.resolutionId === record.value.id && intentState.value.phase === 'idle')
 const canRetryPending = computed(() => ready.value && !reading.value && !props.readOnly && samePending.value && !record.value
   && caps.value.canReview && evidence.value?.canAcknowledge === true && !readingEvidence.value && intentState.value.phase === 'uncertain')
+const canAdopt = computed(() => ready.value && !reading.value && !props.readOnly && caps.value.canRecheck
+  && record.value?.status === 'BLOCKED' && record.value.activeAuthorizationId === null && !!record.value.requestHash
+  && caps.value.resolutionId === record.value.id && !!adoptionReason.value.trim() && adoptionNoReplay.value && adoptionResidualRisk.value
+  && !adopting.value)
 const boolLabel = (value: boolean | null) => value === null ? '未验证' : value ? '是' : '否'
 const processLabel = (value: string | null) => value === 'CURRENT_PROCESS_CLEARED' ? '本进程已知执行器已退出' : value === 'PRIOR_PROCESS_UNVERIFIED' ? '上个进程的执行上下文无法证明' : '未验证'
 const stateLabel = (value: string | null) => value === 'RUNNING' ? '运行中' : value === 'STOPPED' ? '已停止' : value === 'UNKNOWN' ? '未知' : '不可用'
@@ -98,6 +103,17 @@ async function submitNew() {
   } catch (failure) { notice.value = failure instanceof Error ? failure.message : '核对未发送' }
 }
 async function recheck() { if (canRecheck.value && record.value) await submit(resolutionIntent(record.value)) }
+async function adopt() {
+  if (!canAdopt.value || !record.value) return
+  adopting.value = true
+  try {
+    await api.adoptResolution(record.value.id, newIntentKey(), { expectedRequestHash: record.value.requestHash, reason: adoptionReason.value.trim(), acknowledgeNoReplay: true, acknowledgeResidualRisk: true })
+    notice.value = '已显式重新授权核对流程；不会重放原命令。'
+    adoptionReason.value = ''; adoptionNoReplay.value = false; adoptionResidualRisk.value = false
+    await refresh(); emit('changed')
+  } catch (failure) { notice.value = failure instanceof Error ? failure.message : '重新授权失败' }
+  finally { adopting.value = false }
+}
 async function retryPending() { if (canRetryPending.value) await submit() }
 function adoptExisting() {
   if (conflict.value && record.value && sender.adoptExisting(record.value)) { notice.value = '已确认服务端唯一核对记录，后续只继续这条记录；没有发送新请求。'; emit('changed') }
@@ -141,6 +157,14 @@ onUnmounted(() => { alive = false; generation++; controller?.abort(); clearEvide
           <template v-if="record.agentEvidence"><h4>独立 Agent 回执证据</h4><dl class="task-facts"><div><dt>Agent 原记录为</dt><dd>{{ taskStatusLabel(record.agentEvidence.taskStatus) }} / {{ record.agentEvidence.taskResultCode || '无结果码' }}</dd></div><div><dt>原命令观测 / 完成时间</dt><dd>{{ stateLabel(record.agentEvidence.taskObservedStatus) }} / {{ record.agentEvidence.taskFinishedAt ? timeLabel(record.agentEvidence.taskFinishedAt) : '未记录' }}</dd></div><div><dt>本次独立采样 / 尝试时间</dt><dd>{{ stateLabel(record.agentEvidence.observedInstanceStatus) }} / {{ timeLabel(record.agentEvidence.observedAt) }}</dd></div><div><dt>执行器判断</dt><dd>{{ processLabel(record.agentEvidence.processAssessment) }}</dd></div></dl><p>上述证据不证明 Docker daemon 已停止处理原请求，也不替代实例采集状态。</p></template>
           <p v-if="record.status === 'BLOCKED'" class="data-banner error">核对受阻，原互斥保留。修正条件后可显式按原请求重新检查；理由、证据、幂等键和命令均不变。</p>
           <button v-if="record.status === 'BLOCKED'" class="refresh" :disabled="!canRecheck" @click="recheck">按原核对请求重新检查</button>
+          <form v-if="record.status === 'BLOCKED'" class="review-form reauthorization-form" @submit.prevent="adopt">
+            <h4>显式重新授权核对</h4>
+            <p>此操作只恢复核对流程，不会重放原命令，也不会直接解除互斥；服务端会重新验证条件。</p>
+            <label>重新授权理由（最多 500 字）<textarea v-model="adoptionReason" rows="2" aria-label="重新授权理由" :disabled="props.readOnly || !caps.canRecheck || adopting" /></label>
+            <label class="review-ack"><input v-model="adoptionNoReplay" type="checkbox" :disabled="props.readOnly || !caps.canRecheck || adopting" />我确认不会重放原命令。</label>
+            <label class="review-ack"><input v-model="adoptionResidualRisk" type="checkbox" :disabled="props.readOnly || !caps.canRecheck || adopting" />我理解继续核对仍存在剩余风险。</label>
+            <button class="primary" type="submit" :disabled="!canAdopt">{{ adopting ? '正在重新授权…' : '显式重新授权核对' }}</button>
+          </form>
           <h4>独立核对事件时间线</h4><p v-if="!events.length">暂无核对事件。</p><ol v-else class="task-events review-events"><li v-for="event in events" :key="event.id"><div><b>#{{ event.sequence }} {{ event.fromStatus ? resolutionStatusLabel(event.fromStatus) + ' → ' : '' }}{{ resolutionStatusLabel(event.toStatus) }}</b><time>{{ timeLabel(event.occurredAt) }}</time></div><p>{{ reviewReasonLabel(event.reason) }}</p><small>{{ event.actor }} · {{ event.reason }}</small></li></ol>
         </template>
         <template v-else-if="task.status === 'UNKNOWN'">

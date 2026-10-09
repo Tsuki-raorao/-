@@ -27,7 +27,7 @@ function component(api) {
     './api': { api, ApiRequestError, getApiToken: () => '', clearApiToken() {}, saveApiToken() {} },
     './models': models, './logs': logs, './task-control': taskControl, './task-detail': taskDetail, './task-resolution': taskResolution,
     './auth-session': authSession, './scoped-recovery': scopedRecovery,
-    './components/InstanceTable.vue': { default: {} }, './components/TaskDetail.vue': { default: {} }, './components/TaskResolution.vue': { default: {} }
+    './components/InstanceTable.vue': { default: {} }, './components/TaskDetail.vue': { default: {} }, './components/TaskResolution.vue': { default: {} }, './components/ProjectAccess.vue': { default: {} }
   }
   const exports = {}
   vm.runInNewContext(componentCode, { exports, require: name => modules[name], window: { location: { hash: '#/overview' }, history: { pushState() {} }, sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} } }, console })

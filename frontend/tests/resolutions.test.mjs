@@ -15,7 +15,7 @@ const time = '2026-10-09T02:00:00Z'
 const body = { decision: 'ACKNOWLEDGE_UNCERTAINTY', reason: '核对原因', evidence: '日志及观察依据', acknowledgeNoReplay: true, acknowledgeResidualRisk: true }
 const task = models.normalizeTask({ id: 'old-task', instanceId: 'central-a', nodeId: 'node-a', agentInstanceId: 'same', commandId: 'old-command', action: 'RESTART', status: 'UNKNOWN', executionMode: 'MOCK', blocksInstance: true })
 const intent = { key: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', taskId: task.id, instanceId: task.instanceId, nodeId: task.nodeId, agentInstanceId: task.agentInstanceId, commandId: task.commandId, body }
-const resolution = (patch = {}) => ({ id: 'resolution-a', requestKey: intent.key, ...intent, body: undefined, key: undefined, ...body,
+const resolution = (patch = {}) => ({ id: 'resolution-a', requestKey: intent.key, requestHash: 'a'.repeat(64), activeAuthorizationId: null, ...intent, body: undefined, key: undefined, ...body,
   status: 'PENDING', requestedBy: 'operator', createdAt: time, updatedAt: time, appliedAt: null, resultCode: 'REVIEW_ACCEPTED', attempts: 0, agentEvidence: null, ...patch })
 const capabilities = { reviewEnabled: true, canReview: true, canRecheck: false, allowedDecisions: ['ACKNOWLEDGE_UNCERTAINTY'], reason: 'READY', blocksInstance: true, resolutionId: null }
 const evidence = { taskId: task.id, instanceId: task.instanceId, nodeId: task.nodeId, agentInstanceId: task.agentInstanceId, commandId: task.commandId,

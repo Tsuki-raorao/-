@@ -13,6 +13,7 @@ export interface AgentEvidence {
 }
 export interface Resolution extends ReviewBody {
   id: string; requestKey: string; taskId: string; instanceId: string; nodeId: string; agentInstanceId: string; commandId: string
+  requestHash: string; activeAuthorizationId: string | null
   status: ResolutionStatus; requestedBy: string; createdAt: string; updatedAt: string; appliedAt: string | null
   resultCode: string | null; attempts: number; agentEvidence: AgentEvidence | null
 }
@@ -28,6 +29,7 @@ const record = (x: unknown): Record<string, unknown> => x && typeof x === 'objec
 const nonempty = (x: unknown): x is string => typeof x === 'string' && x.trim().length > 0
 const nullableString = (x: unknown) => x === null || nonempty(x)
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+const requestHash = /^[0-9a-f]{64}$/i
 const identityKeys = ['taskId', 'instanceId', 'nodeId', 'agentInstanceId', 'commandId'] as const
 const isStatus = (x: unknown): x is ResolutionStatus => statuses.includes(x as ResolutionStatus)
 export const disabledReview = (reason = '核对权限尚未验证'): ReviewCapabilities => ({ reviewEnabled: false, canReview: false, canRecheck: false, allowedDecisions: [], reason, blocksInstance: null, resolutionId: null })
@@ -65,7 +67,8 @@ export function normalizeReviewBody(input: unknown): ReviewBody {
 }
 export function normalizeResolution(input: unknown): Resolution {
   const x = record(input), body = normalizeReviewBody(x)
-  if (![...identityKeys, 'id', 'requestedBy'].every(key => nonempty(x[key])) || !uuid.test(String(x.requestKey)) || !isStatus(x.status)
+  if (![...identityKeys, 'id', 'requestedBy'].every(key => nonempty(x[key])) || !uuid.test(String(x.requestKey)) || !requestHash.test(String(x.requestHash))
+    || !(x.activeAuthorizationId === null || uuid.test(String(x.activeAuthorizationId))) || !isStatus(x.status)
     || !timestamp(x.createdAt) || !timestamp(x.updatedAt) || (x.appliedAt !== null && !timestamp(x.appliedAt))
     || (x.status === 'APPLIED') !== !!x.appliedAt || !nullableString(x.resultCode) || !Number.isSafeInteger(x.attempts) || Number(x.attempts) < 0
     || body.reason !== x.reason || body.evidence !== x.evidence) throw Error('核对记录格式或身份无效')
@@ -82,7 +85,7 @@ export function normalizeResolution(input: unknown): Resolution {
     agentEvidence = e as unknown as AgentEvidence
   }
   if (x.status === 'APPLIED' && !agentEvidence) throw Error('已应用核对缺少经过验证的 Agent 证据')
-  return { ...x, ...body, agentEvidence } as unknown as Resolution
+  return { ...x, ...body, requestHash: String(x.requestHash).toLowerCase(), activeAuthorizationId: x.activeAuthorizationId as string | null, agentEvidence } as unknown as Resolution
 }
 export function normalizeReviewCapabilities(input: unknown): ReviewCapabilities {
   const x = record(input)
