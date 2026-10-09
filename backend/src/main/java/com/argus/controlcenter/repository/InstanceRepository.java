@@ -68,7 +68,7 @@ public class InstanceRepository {
     public List<String> findIdsByNodeId(String nodeId) { return jdbc.queryForList("SELECT id FROM instances WHERE node_id=?", String.class, nodeId); }
     private Object[] appendId(Object[] fields,String id){ Object[] result=java.util.Arrays.copyOf(fields,fields.length+1); result[result.length-1]=id; return result; }
     private boolean hasProjectColumn(){
-        try{return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='INSTANCES' AND COLUMN_NAME='PROJECT_ID'",Integer.class)>0;}
+        try{return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='instances' AND LOWER(COLUMN_NAME)='project_id'",Integer.class)>0;}
         catch(RuntimeException ignored){return false;}
     }
 }

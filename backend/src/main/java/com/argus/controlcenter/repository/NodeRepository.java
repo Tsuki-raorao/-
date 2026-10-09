@@ -58,5 +58,5 @@ public class NodeRepository {
     public int deleteById(String id) { return jdbc.update("DELETE FROM nodes WHERE id=?", id); }
     private Object[] withProject(Node value){Object[] base=fields(value);Object[] out=java.util.Arrays.copyOf(base,base.length+1);out[out.length-1]=value.getProjectId()==null?IdentityConstants.LEGACY_PROJECT_ID:value.getProjectId();return out;}
     private Object[] appendId(Object[] values,String id){Object[] out=java.util.Arrays.copyOf(values,values.length+1);out[out.length-1]=id;return out;}
-    private boolean hasProjectColumn(){try{return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='NODES' AND COLUMN_NAME='PROJECT_ID'",Integer.class)>0;}catch(RuntimeException ignored){return false;}}
+    private boolean hasProjectColumn(){try{return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='nodes' AND LOWER(COLUMN_NAME)='project_id'",Integer.class)>0;}catch(RuntimeException ignored){return false;}}
 }

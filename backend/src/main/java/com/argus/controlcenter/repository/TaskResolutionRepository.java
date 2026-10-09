@@ -114,7 +114,7 @@ public class TaskResolutionRepository {
         Map<String,String> locks=new HashMap<>();jdbc.query("SELECT instance_id,task_id FROM instance_task_locks",rs->{locks.put(rs.getString(1),rs.getString(2));});return locks;
     }
     private boolean hasColumn(String column){
-        try{return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='TASK_RESOLUTIONS' AND COLUMN_NAME=?",Integer.class,column.toUpperCase())>0;}
+        try{return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='task_resolutions' AND LOWER(COLUMN_NAME)=LOWER(?)",Integer.class,column)>0;}
         catch(RuntimeException ignored){return false;}
     }
     private static String optional(ResultSet rs,String column) {
