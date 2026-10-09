@@ -3,7 +3,9 @@ package db.migration;
 import java.sql.*;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 
@@ -37,7 +39,12 @@ public class V7__identity_projects extends BaseJavaMigration {
     }
 
     private void createIdentityTables(Connection c) throws SQLException {
-        execute(c, "CREATE TABLE users (id " + userRef + " PRIMARY KEY, issuer VARCHAR(512) NOT NULL, subject VARCHAR(512) NOT NULL, display_name VARCHAR(128) NOT NULL, status VARCHAR(16) NOT NULL, platform_role VARCHAR(32) NOT NULL, version_no BIGINT NOT NULL DEFAULT 0, created_at TIMESTAMP(6) NOT NULL, updated_at TIMESTAMP(6) NOT NULL, CONSTRAINT uq_users_issuer_subject UNIQUE(issuer,subject))");
+        // MySQL utf8mb4 下两个 512 字符列的联合索引最多需要 4096 字节，超过 InnoDB 3072 字节限制。
+        // 保留完整 issuer/subject 值，用生成的 SHA-256 二进制列实现等值唯一约束；H2 继续使用直接联合唯一约束。
+        String userIdentityConstraint = mysql
+                ? ", identity_hash BINARY(32) GENERATED ALWAYS AS (UNHEX(SHA2(CONCAT(issuer, CHAR(0), subject), 256))) STORED, CONSTRAINT uq_users_issuer_subject_hash UNIQUE(identity_hash)"
+                : ", CONSTRAINT uq_users_issuer_subject UNIQUE(issuer,subject)";
+        execute(c, "CREATE TABLE users (id " + userRef + " PRIMARY KEY, issuer VARCHAR(512) NOT NULL, subject VARCHAR(512) NOT NULL, display_name VARCHAR(128) NOT NULL, status VARCHAR(16) NOT NULL, platform_role VARCHAR(32) NOT NULL, version_no BIGINT NOT NULL DEFAULT 0, created_at TIMESTAMP(6) NOT NULL, updated_at TIMESTAMP(6) NOT NULL" + userIdentityConstraint + ")");
         execute(c, "CREATE TABLE projects (id " + projectRef + " PRIMARY KEY, name VARCHAR(128) NOT NULL, status VARCHAR(16) NOT NULL, permission_version BIGINT NOT NULL DEFAULT 0, created_at TIMESTAMP(6) NOT NULL, updated_at TIMESTAMP(6) NOT NULL)");
         execute(c, "CREATE TABLE project_members (project_id " + projectRef + " NOT NULL, user_id " + userRef + " NOT NULL, role VARCHAR(16) NOT NULL, version_no BIGINT NOT NULL DEFAULT 0, created_at TIMESTAMP(6) NOT NULL, updated_at TIMESTAMP(6) NOT NULL, PRIMARY KEY(project_id,user_id), CONSTRAINT fk_member_project FOREIGN KEY(project_id) REFERENCES projects(id), CONSTRAINT fk_member_user FOREIGN KEY(user_id) REFERENCES users(id))");
         execute(c, "CREATE TABLE identity_config_gate (id " + projectRef + " PRIMARY KEY, mode VARCHAR(24) NOT NULL, oidc_activated BOOLEAN NOT NULL DEFAULT FALSE, bootstrap_issuer VARCHAR(512) NULL, bootstrap_subject VARCHAR(512) NULL, bootstrap_user_id " + userRef + " NULL, updated_at TIMESTAMP(6) NOT NULL)");
@@ -119,11 +126,15 @@ public class V7__identity_projects extends BaseJavaMigration {
     private void addForeignKey(Connection c, String name, String table, String column, String parent, String parentColumn) throws SQLException { if (!hasForeignKey(c, table, name)) execute(c, "ALTER TABLE " + table + " ADD CONSTRAINT " + name + " FOREIGN KEY(" + column + ") REFERENCES " + parent + "(" + parentColumn + ")"); }
     private boolean hasForeignKey(Connection c, String table, String name) throws SQLException { try (ResultSet r=c.getMetaData().getImportedKeys(null,null,table)) { while(r.next()) if(name.equalsIgnoreCase(r.getString("FK_NAME"))) return true; } return false; }
     private void dropUniqueIndexesOn(Connection c, String table, String column) throws SQLException {
-        List<String> names = new ArrayList<>();
+        Set<String> names = new LinkedHashSet<>();
         try (ResultSet r=c.getMetaData().getIndexInfo(null,null,table,true,false)) {
             while(r.next()) { String name=r.getString("INDEX_NAME"), col=r.getString("COLUMN_NAME"); if(name!=null && col!=null && column.equalsIgnoreCase(col)) names.add(name); }
         }
-        for(String name:names) { if(mysql) execute(c,"ALTER TABLE "+table+" DROP INDEX `"+name.replace("`","``")+"`"); else execute(c,"DROP INDEX "+name); }
+        for(String name:names) {
+            // MySQL 元数据在部分版本可能返回同一索引多行；第一次删除后再次确认，避免重复 DROP。
+            if (!hasIndex(c, table, name)) continue;
+            if(mysql) execute(c,"ALTER TABLE "+table+" DROP INDEX `"+name.replace("`","``")+"`"); else execute(c,"DROP INDEX "+name);
+        }
     }
     private String referenceType(Connection c, String table) throws SQLException {
         try (PreparedStatement p=c.prepareStatement("SELECT DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,CHARACTER_SET_NAME,COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME='id'")) {
