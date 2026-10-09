@@ -33,6 +33,7 @@
 | [05-Agent与服务适配器.md](05-Agent与服务适配器.md) | Agent 协议、Adapter、NeoForge、Docker 服务接入 | P1 |
 | [06-AI与RAG.md](06-AI与RAG.md) | LangChain4j、工具调用、RAG 和 AI 安全边界 | P3 |
 | [07-RAG资料处理规范.md](07-RAG资料处理规范.md) | 文档清洗、版本、元数据、切分和审核规则 | P1 |
+| [08-AI工具与证据契约.md](08-AI工具与证据契约.md) | AI 工具边界、证据结构和只读/操作分层 | P2 |
 | [sources.yaml](sources.yaml) | 官方来源、项目用途和适用阶段清单 | P0 |
 
 ## 使用规则
