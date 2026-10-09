@@ -1,6 +1,6 @@
 # 未序 Argus
 
-未序 Argus 是面向个人和小团队的多节点服务器与容器管理平台原型。**2026-10-09 已完成 V6 只读部署：保留 80/9090 IP 入口，双节点共 8 个 Docker 实例与两边日志可读。UNKNOWN 人工核对的独立证据、持久队列/审计、原键恢复和条件解锁已有实现，但生产业务控制与核对均关闭，未进行生产核对操作。完整 RBAC、MQ、AI 仍未实现。** 先看 [项目说明与进度汇报](docs/项目说明与进度汇报.md)，再按需要阅读接口和设计。
+未序 Argus 是面向个人和小团队的多节点服务器与容器管理平台原型。**2026-10-09 已完成 V6 只读部署：保留 80/9090 IP 入口，双节点共 8 个 Docker 实例与两边日志可读。UNKNOWN 人工核对的独立证据、持久队列/审计、原键恢复和条件解锁已有实现，生产业务控制与核对均关闭。当前源码还包含默认关闭的 Redis 缓存、RabbitMQ Outbox 和 V8 数据迁移；AI、真实注册/OIDC 与完整 RBAC 仍按阶段推进。** 先看 [项目说明与进度汇报](docs/项目说明与进度汇报.md)，再按需要阅读接口和设计。
 
 ## 当前能力
 
@@ -22,13 +22,15 @@
 
 | 目录 | 内容 |
 |---|---|
-| `backend/` | Java 17、Spring Boot 3.3.5、JdbcTemplate、Flyway 10.20.1、H2/MySQL；源码与生产迁移均为 V1–V6 |
+| `backend/` | Java 17、Spring Boot 3.3.5、JdbcTemplate、Flyway 10.20.1、H2/MySQL；本地源码迁移为 V1–V8，生产仍为 V6 只读 |
 | `agent/` | Java 17 自带 HttpServer，Docker/mock 执行器、持久 Inbox |
 | `frontend/` | Vue 3.5.43、TypeScript 5.7.3、Vite 6.4.3（lockfile 版本） |
 | `deploy/` | Nginx、systemd、数据库和实例备份模板 |
 | `scripts/` | 本地启动、检查及项目备份脚本 |
 | `relay/` | 独立协作聊天室：用户、Codex、Dot 的消息 API、网页与客户端 |
 | `docs/` | 进度、交接、接口、设计与技术资料索引 |
+| `handoff/` | 本机交接包和校验材料，已忽略，不上传 Git |
+| `backups/` / `local-private/` | 本机备份、验收记录和私有运行资料，已忽略，不上传 Git |
 
 `frontend/public/logo.png` 为银白色“未序”横版 Logo，`frontend/public/weixu-niang.png` 为“未序娘”头像。角色形象目前仅用于展示，不代表已接入模型或自动运维能力。
 
@@ -54,7 +56,7 @@
 
 ## 验证
 
-UNKNOWN 本机开发验收：Agent **89 项 Java/3 项 JSON**、后端 **80 项一次全通过、0 跳过**（含 6 项真实 MySQL）、前端 **50 项行为测试及构建、Edge 13 类核对交互**；实际双 Java Agent、打包后端、隔离 MySQL/Edge 的 **38 项断言通过**。真实页面只准备确认并验证 0 POST；测试 API 覆盖丢回应后双进程恢复、原 UNKNOWN/事件不变、旧回执不清新锁和 BLOCKED 原键续办。此开发阶段未使用真实 Docker 或远程服务；后续只读发布另列，不能外推为真实业务核对通过。
+UNKNOWN 本机开发验收：Agent **89 项 Java/3 项 JSON**、后端当前 **84 项测试总数（78 通过、6 按环境跳过、0 失败/0 错误）**、前端 **57 项行为测试及构建**；实际双 Java Agent、打包后端、隔离 MySQL/Edge 的 **38 项断言通过**。真实页面只准备确认并验证 0 POST；测试 API 覆盖丢回应后双进程恢复、原 UNKNOWN/事件不变、旧回执不清新锁和 BLOCKED 原键续办。此开发阶段未使用真实 Docker 或远程服务；后续只读发布另列，不能外推为真实业务核对通过。
 
 2026-10-09 新版中央、前端和两台 Agent 已按只读方式部署，生产数据库为 V6。80/9090 IP 入口保留，静态资源与候选构建一致；匿名 API 401、查看令牌 200、双节点共 8 个当前 Docker 实例及两边最近日志身份通过。业务控制与人工核对开关均关闭，任务和核对三表为空；没有创建生产 UNKNOWN 或提交生产核对。 09:50–09:51（北京时间）发布后两入口各 82 项检查通过：1440px/390px 五页无横向溢出、0 页面异常/0 写请求，两节点每个完整批次各 4 实例及两边日志身份正确。两入口复用同一套检查，不算 164 个独立功能用例；Google Fonts 被测试环境拦截，使用系统字体。 现场备份和完整截图仅私有保存；首轮未通过与后续观察见 [问题记录](docs/问题记录.md)。以下历史结果不与本轮累计混算。
 
@@ -79,8 +81,9 @@ npm --prefix frontend run build
 - 部署：[部署角色说明](docs/部署角色说明.md)、[部署与备份方案](docs/部署与备份方案.md)、[部署模板](deploy/README.md)、[备份恢复操作手册](docs/备份恢复操作手册.md)
 - 后端：[开发文档](backend/docs/开发文档.md)、[变量与接口](backend/docs/变量与接口文档.md)、[数据库表](backend/docs/数据库表文档.md)
 - 设计与后续计划：[平台设计](docs/Argus平台设计文档.md)、[企业级架构重设计](docs/Argus企业级架构重设计.md)、[数据模型与任务可靠性](docs/Argus数据模型与任务可靠性.md)、[迁移计划](docs/Argus从MVP到生产迁移计划.md)、[技术资料索引](docs/技术文档/README.md)
+- 目录导航：[目录结构](docs/目录结构.md)
 
-设计文档描述目标架构；是否已实现以进度与验收文档为准。当前可靠投递使用数据库队列和本地 Inbox，不依赖 Redis/RabbitMQ；这些组件、完整 RBAC/审计、Prometheus/Grafana/Loki 与 AI/RAG 仍属于后续工作。
+设计文档描述目标架构；是否已实现以进度与验收文档为准。当前可靠任务使用数据库队列和 Agent 本地 Inbox，Redis 作为可选热缓存，RabbitMQ 通过 V8 Outbox 提供可选事件投递；完整 RBAC、Prometheus/Grafana/Loki 与 AI/RAG 仍属于后续阶段。
 
 ## 配置与隐私
 
