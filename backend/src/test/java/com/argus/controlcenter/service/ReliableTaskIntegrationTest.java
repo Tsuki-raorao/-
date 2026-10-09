@@ -94,6 +94,7 @@ class ReliableTaskIntegrationTest {
         assertThat(instances.findById("instance-a").orElseThrow().getUpdatedAt()).isEqualTo(Instant.parse("2026-01-01T00:00:00Z"));
         assertThat(tasks.events(first.getId())).extracting(TaskEvent::sequence).containsExactly(1L,2L,3L);
         assertThat(tasks.events(first.getId())).extracting(TaskEvent::toStatus).containsExactly(TaskStatus.PENDING,TaskStatus.DISPATCHING,TaskStatus.SUCCEEDED);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM task_event_outbox WHERE task_id=?",Integer.class,first.getId())).isEqualTo(3);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM instance_task_locks",Integer.class)).isZero();
     }
 
@@ -122,6 +123,7 @@ class ReliableTaskIntegrationTest {
             assertThat(repository.count()).isZero();
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM task_queue",Integer.class)).isZero();
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM instance_task_locks",Integer.class)).isZero();
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM task_event_outbox",Integer.class)).isZero();
         } finally {jdbc.execute("ALTER TABLE task_events DROP CONSTRAINT reject_test_event");}
     }
 

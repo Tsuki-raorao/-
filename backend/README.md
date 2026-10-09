@@ -41,7 +41,7 @@ IDEA 中导入本目录的 `pom.xml`，使用 JDK 17，在 `Run → Edit Configu
 
 ### Redis 与 RabbitMQ（面试版可选基础设施）
 
-MySQL 仍然保存任务和事件事实。设置 `ARGUS_REDIS_ENABLED=true` 后，任务状态会写入带 TTL 的 Redis 热缓存，Redis 不可用时自动回源 MySQL；设置 `ARGUS_MQ_ENABLED=true` 后，任务状态变化会发布到 RabbitMQ，消费者必须回查 MySQL 获取权威状态。连接参数使用 Spring Boot 的 `SPRING_DATA_REDIS_*` 与 `SPRING_RABBITMQ_*` 环境变量，默认均关闭，不影响 H2 本地启动。
+MySQL 仍然保存任务和事件事实。设置 `ARGUS_REDIS_ENABLED=true` 后，任务状态会写入带 TTL 的 Redis 热缓存，Redis 不可用时自动回源 MySQL；设置 `ARGUS_MQ_ENABLED=true` 后，事务内写入的 Outbox 由后台 worker 投递到 RabbitMQ，失败按租约和退避重试，消费者必须回查 MySQL 获取权威状态。连接参数使用 Spring Boot 的 `SPRING_DATA_REDIS_*` 与 `SPRING_RABBITMQ_*` 环境变量，默认均关闭，不影响 H2 本地启动。
 
 面试联调可使用 `deploy/docker-compose.interview.yml` 启动 Redis 和 RabbitMQ；RabbitMQ 的本地账号通过命令行环境变量提供，不写入仓库。容器只绑定本机管理端口，不作为生产部署模板。
 
@@ -78,6 +78,6 @@ UNKNOWN 人工核对默认另行关闭：`ARGUS_TASK_REVIEW_ENABLED=false`、允
 
 实例使用中央 ID 与 `nodeId + agentInstanceId` 两种身份：已有 ID 和历史任务日志保持不变，新发现实例使用 UUID。采集响应明确区分真实零值、未支持的 `null`、`MOCK` 演示和 `LEGACY` 未验证数据。完整快照校验通过后整批入库，失败不会更新成功时间或用零覆盖旧指标。具体时间语义和迁移边界见上述开发文档。
 
-2026-10-09 02:10:26最新后端验证共80项，一次完整运行全部通过、0跳过；包括20项人工核对集成和六项真实隔离MySQL专项，旧采集/任务与V4/V5兼容测试保留。V6验证含原UNKNOWN历史升级、不同父列排序规则、真实库并发租约与迟到owner拒绝；核对覆盖丢回包恢复、原历史不变、权威锁、同键续办、错误身份/时间/哈希拒绝和权限。02:11:26离线跳测打包成功。完整记录见[本地验证](docs/开发文档.md#6-本地验证)，测试通过不等于已部署生产或真实Docker核对验收。
+2026-10-09 最新后端验证共84项，其中78项通过、6项按环境跳过、0失败、0错误；包含 V8 Outbox 迁移、人工核对集成和旧采集/任务兼容测试。V8 将任务事件与业务事务一起写入 MySQL，RabbitMQ 启用后由后台 worker 按租约和退避重试；Redis/MQ 默认关闭，测试不宣称真实消息容器往返已验收。完整记录见[本地验证](docs/开发文档.md#6-本地验证)，测试通过不等于已部署生产或真实Docker核对验收。
 
 本轮上线前使用新鲜V5单库备份在隔离MySQL恢复并升级V6，保留全部旧业务行与ID；备份中的旧JAR在同一V6库实际只读启动通过，常规回退可恢复代码/网页并保留V6。这仅适用于本次新旧构建与只读配置，未来版本须重新验证。上线API验证确认原2节点8实例、空任务及核对表、两节点新采集与日志、原查看令牌和只读边界保持；浏览器验收与最终发布状态以[开发进度](../docs/开发进度.md)为准。

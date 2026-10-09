@@ -33,18 +33,21 @@ public class TaskQueueStore {
     private final CurrentActorProvider actorProvider;
     private final TaskStateCache stateCache;
     private final TaskEventPublisher eventPublisher;
+    private final TaskEventOutboxRepository eventOutbox;
     @Deprecated
     public TaskQueueStore(JdbcTemplate jdbc,TaskRepository repository,NodeRepository nodes,InstanceRepository instances,
                           TaskControlPolicy policy,AgentCommandGateway gateway,TaskControlProperties properties,PlatformTransactionManager manager) {
-        this(jdbc,repository,nodes,instances,policy,gateway,properties,manager,null,null,null,null);
+        this(jdbc,repository,nodes,instances,policy,gateway,properties,manager,null,null,null,null,null);
     }
     @Autowired
     public TaskQueueStore(JdbcTemplate jdbc,TaskRepository repository,NodeRepository nodes,InstanceRepository instances,
                           TaskControlPolicy policy,AgentCommandGateway gateway,TaskControlProperties properties,PlatformTransactionManager manager,
-                          ProjectAuthorization authorization,CurrentActorProvider actorProvider,TaskStateCache stateCache,TaskEventPublisher eventPublisher) {
+                          ProjectAuthorization authorization,CurrentActorProvider actorProvider,TaskStateCache stateCache,TaskEventPublisher eventPublisher,
+                          TaskEventOutboxRepository eventOutbox) {
         this.jdbc=jdbc;this.repository=repository;this.nodes=nodes;this.instances=instances;this.policy=policy;this.gateway=gateway;this.properties=properties;
         this.authorization=authorization;this.actorProvider=actorProvider;
         this.stateCache=stateCache==null?new NoopTaskStateCache():stateCache; this.eventPublisher=eventPublisher==null?new NoopTaskEventPublisher():eventPublisher;
+        this.eventOutbox=eventOutbox;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
     public static Instant now() { return Instant.now().truncatedTo(ChronoUnit.MICROS); }
@@ -81,8 +84,9 @@ public class TaskQueueStore {
                 jdbc.update("INSERT INTO task_queue(task_id,next_run_at) VALUES(?,?)",task.getId(),timestamp(time));
                 jdbc.update("INSERT INTO instance_task_locks(instance_id,task_id) VALUES(?,?)",instance.getId(),task.getId());
                 repository.appendEvent(task.getId(),1,null,TaskStatus.PENDING,"operator","ACCEPTED",time);
+                if (eventOutbox != null) eventOutbox.append(task.getId(),1,null,TaskStatus.PENDING,"operator","ACCEPTED",time);
                 AfterCommitNotification.register(() -> stateCache.put(task));
-                AfterCommitNotification.register(() -> eventPublisher.publish(task.getId(),1,null,TaskStatus.PENDING,"operator","ACCEPTED",time));
+                if (eventOutbox == null) AfterCommitNotification.register(() -> eventPublisher.publish(task.getId(),1,null,TaskStatus.PENDING,"operator","ACCEPTED",time));
                 return repository.findById(task.getId()).orElseThrow();
             });
         } catch(DuplicateKeyException e) {
@@ -156,8 +160,9 @@ public class TaskQueueStore {
         if(stopped(state)) task.setFinishedAt(time);
         if(!repository.updateState(task,current.version(),accepted)) throw new IllegalStateException("task state CAS failed while locked");
         repository.appendEvent(task.getId(),current.version()+1,previous,state,"worker",code,time);
+        if (eventOutbox != null) eventOutbox.append(task.getId(),current.version()+1,previous,state,"worker",code,time);
         AfterCommitNotification.register(() -> stateCache.put(task));
-        AfterCommitNotification.register(() -> eventPublisher.publish(task.getId(),current.version()+1,previous,state,"worker",code,time));
+        if (eventOutbox == null) AfterCommitNotification.register(() -> eventPublisher.publish(task.getId(),current.version()+1,previous,state,"worker",code,time));
     }
     public static boolean stopped(TaskStatus state) { return state==TaskStatus.SUCCEEDED||state==TaskStatus.FAILED||state==TaskStatus.UNKNOWN; }
 }
