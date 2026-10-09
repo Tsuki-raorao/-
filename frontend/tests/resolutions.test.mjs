@@ -109,16 +109,47 @@ test('独立核对事件必须同记录且递增；不接受另一个任务时�
 const { descriptor } = parse(readFileSync(new URL('../src/components/TaskResolution.vue', import.meta.url), 'utf8'))
 const code = ts.transpileModule(compileScript(descriptor, { id: 'review-test' }).content, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText
 function component(apiOverrides = {}, storage = store(), props = { taskId: task.id, readOnly: false }) {
-  let unmount; const emitted = []
+  let mount, unmount, interval; const emitted = []
   const api = { task: async () => task, taskResolution: async () => null, reviewCapabilities: async () => review.normalizeReviewCapabilities(capabilities),
     reviewEvidence: async () => evidence, resolutionEvents: async () => [], resolveTask: async () => resolution(), ...apiOverrides }
-  const modules = { vue: { ...vue, onMounted() {}, onUnmounted(f) { unmount = f } }, '../api': { api }, '../models': models, '../task-control': control, '../task-resolution': review }
+  const modules = { vue: { ...vue, onMounted(f) { mount = f }, onUnmounted(f) { unmount = f } }, '../api': { api }, '../models': models, '../task-control': control, '../task-resolution': review }
   const exports = {}
-  vm.runInNewContext(code, { exports, require: name => modules[name], window: { sessionStorage: storage, clearInterval() {} }, AbortController, console })
+  vm.runInNewContext(code, { exports, require: name => modules[name], window: { sessionStorage: storage, setInterval(f) { interval = f; return 1 }, clearInterval() { interval = undefined } }, AbortController, console })
   const app = exports.default.setup(props, { expose() {}, emit: (...args) => emitted.push(args) })
-  return { app, emitted, unmount: () => unmount(), props }
+  const settle = () => new Promise(resolve => setImmediate(resolve))
+  return { app, emitted, mount: async () => { mount(); await settle() }, tick: async () => { assert.equal(typeof interval, 'function'); interval(); await settle() }, unmount: () => unmount(), props }
 }
 async function fill(app) { await app.refresh(); await app.readEvidence(); app.reason.value = body.reason; app.manualEvidence.value = body.evidence; app.noReplay.value = true; app.residualRisk.value = true }
+
+test('实际组件定时刷新同一原任务：PENDING→RUNNING→SUCCEEDED同步锁状态，不自动写入', async () => {
+  let current = { ...task, status: 'PENDING' }, reads = 0, posts = 0
+  const view = component({ task: async () => { reads++; return current }, resolveTask: async () => { posts++; throw Error('unexpected write') } })
+  await view.mount(); assert.equal(view.app.task.value.status, 'PENDING')
+  current = { ...current, status: 'RUNNING' }; await view.tick()
+  assert.equal(view.app.task.value.status, 'RUNNING')
+  current = { ...current, status: 'SUCCEEDED', blocksInstance: false }; await view.tick()
+  assert.equal(view.app.task.value.status, 'SUCCEEDED'); assert.equal(view.app.task.value.blocksInstance, false)
+  const terminalReads = reads; await view.tick(); assert.equal(reads, terminalReads)
+  assert.equal(view.app.canSubmit.value, false); assert.equal(posts, 0)
+  view.unmount()
+})
+
+test('实际组件定时发现UNKNOWN后保留人工原因、证据和双ACK，后续tick不自动刷新表单或发送', async () => {
+  let current = { ...task, status: 'PENDING' }, reads = 0, posts = 0
+  const view = component({ task: async () => { reads++; return current }, resolveTask: async () => { posts++; throw Error('unexpected write') } })
+  await view.mount(); current = task; await view.tick()
+  assert.equal(view.app.task.value.status, 'UNKNOWN')
+  await view.app.readEvidence()
+  view.app.reason.value = body.reason; view.app.manualEvidence.value = body.evidence
+  view.app.noReplay.value = true; view.app.residualRisk.value = true
+  assert.equal(view.app.canSubmit.value, true)
+  const confirmedEvidence = view.app.evidence.value, beforeReads = reads
+  await view.tick(); await view.tick()
+  assert.equal(reads, beforeReads); assert.equal(view.app.reason.value, body.reason); assert.equal(view.app.manualEvidence.value, body.evidence)
+  assert.equal(view.app.noReplay.value, true); assert.equal(view.app.residualRisk.value, true)
+  assert.equal(view.app.evidence.value, confirmedEvidence); assert.equal(view.app.canSubmit.value, true); assert.equal(posts, 0)
+  view.unmount()
+})
 test('实际核对组件需同任务证据及两个未预选确认，202 只显示持久接收', async () => {
   const calls = []; const { app } = component({ resolveTask: async value => { calls.push(value); return resolution({ requestKey: value.key }) } })
   await app.refresh()

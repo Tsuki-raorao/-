@@ -97,7 +97,14 @@ async function retryPending() { if (canRetryPending.value) await submit() }
 function adoptExisting() {
   if (conflict.value && record.value && sender.adoptExisting(record.value)) { notice.value = '已确认服务端唯一核对记录，后续只继续这条记录；没有发送新请求。'; emit('changed') }
 }
-onMounted(() => { void refresh(); timer = window.setInterval(() => { if (!reading.value && intentState.value.phase !== 'submitting' && (record.value || !ready.value)) void refresh() }, 15000) })
+onMounted(() => {
+  void refresh()
+  timer = window.setInterval(() => {
+    const awaitingResult = task.value && ['PENDING', 'DISPATCHING', 'DELIVERED', 'RUNNING', 'RETRY_WAIT'].includes(task.value.status)
+    // 原任务仍执行时同步状态与互斥；进入 UNKNOWN 且无核对记录后，保留正在填写的表单与确认前证据。
+    if (!reading.value && intentState.value.phase !== 'submitting' && (record.value || !ready.value || awaitingResult)) void refresh()
+  }, 15000)
+})
 onUnmounted(() => { alive = false; generation++; controller?.abort(); clearEvidence(); sender.invalidate(); if (timer) window.clearInterval(timer) })
 </script>
 
