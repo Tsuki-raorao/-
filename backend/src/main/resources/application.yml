@@ -17,6 +17,14 @@ spring:
     enabled: true
     locations: classpath:db/migration
 argus:
+  redis:
+    enabled: ${ARGUS_REDIS_ENABLED:false}
+    key-prefix: ${ARGUS_REDIS_KEY_PREFIX:argus:}
+    ttl: ${ARGUS_REDIS_TTL:120s}
+  messaging:
+    enabled: ${ARGUS_MQ_ENABLED:false}
+    exchange: ${ARGUS_MQ_EXCHANGE:argus.events}
+    task-events-routing-key: ${ARGUS_MQ_TASK_EVENTS_ROUTING_KEY:task.event}
   identity:
     # 仅本地联调显式打开；不会创建密码或令牌，生产/MySQL 默认关闭。
     test-data:

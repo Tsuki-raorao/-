@@ -39,6 +39,12 @@ IDEA 中导入本目录的 `pom.xml`，使用 JDK 17，在 `Run → Edit Configu
 
 本地与 Git 保持同一份源码，真实连接只保存在个人运行配置或部署环境。自动化测试使用 H2 内存库与本机 mock 服务，不复用 MySQL 运行配置；测试通过不能替代在独立测试库进行真实 MySQL 验证。
 
+### Redis 与 RabbitMQ（面试版可选基础设施）
+
+MySQL 仍然保存任务和事件事实。设置 `ARGUS_REDIS_ENABLED=true` 后，任务状态会写入带 TTL 的 Redis 热缓存，Redis 不可用时自动回源 MySQL；设置 `ARGUS_MQ_ENABLED=true` 后，任务状态变化会发布到 RabbitMQ，消费者必须回查 MySQL 获取权威状态。连接参数使用 Spring Boot 的 `SPRING_DATA_REDIS_*` 与 `SPRING_RABBITMQ_*` 环境变量，默认均关闭，不影响 H2 本地启动。
+
+面试联调可使用 `deploy/docker-compose.interview.yml` 启动 Redis 和 RabbitMQ；RabbitMQ 的本地账号通过命令行环境变量提供，不写入仓库。容器只绑定本机管理端口，不作为生产部署模板。
+
 ### 身份页面联调夹具
 
 暂不接入真实注册时，可在 IDEA 的本地运行配置中增加 `ARGUS_IDENTITY_TEST_DATA_ENABLED=true`。启动后会在当前本地数据库补充 3 个固定测试身份和 2 个项目：测试管理员（`admin`）、测试操作员（`operator`）和测试查看者（`viewer`）。身份使用固定的测试 issuer/subject 供 mock OIDC 或接口测试映射，不生成密码、令牌或外部账号；重复启动不会覆盖已有记录。该开关默认关闭，MySQL 配置也默认关闭，禁止在生产环境打开。

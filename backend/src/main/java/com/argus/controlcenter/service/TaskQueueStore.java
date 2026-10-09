@@ -15,6 +15,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.argus.controlcenter.identity.*;
+import com.argus.controlcenter.infra.*;
 
 /** 所有数据库状态转换均为短事务；此类绝不执行 HTTP。 */
 @Service
@@ -30,17 +31,20 @@ public class TaskQueueStore {
     private final TransactionTemplate tx;
     private final ProjectAuthorization authorization;
     private final CurrentActorProvider actorProvider;
+    private final TaskStateCache stateCache;
+    private final TaskEventPublisher eventPublisher;
     @Deprecated
     public TaskQueueStore(JdbcTemplate jdbc,TaskRepository repository,NodeRepository nodes,InstanceRepository instances,
                           TaskControlPolicy policy,AgentCommandGateway gateway,TaskControlProperties properties,PlatformTransactionManager manager) {
-        this(jdbc,repository,nodes,instances,policy,gateway,properties,manager,null,null);
+        this(jdbc,repository,nodes,instances,policy,gateway,properties,manager,null,null,null,null);
     }
     @Autowired
     public TaskQueueStore(JdbcTemplate jdbc,TaskRepository repository,NodeRepository nodes,InstanceRepository instances,
                           TaskControlPolicy policy,AgentCommandGateway gateway,TaskControlProperties properties,PlatformTransactionManager manager,
-                          ProjectAuthorization authorization,CurrentActorProvider actorProvider) {
+                          ProjectAuthorization authorization,CurrentActorProvider actorProvider,TaskStateCache stateCache,TaskEventPublisher eventPublisher) {
         this.jdbc=jdbc;this.repository=repository;this.nodes=nodes;this.instances=instances;this.policy=policy;this.gateway=gateway;this.properties=properties;
         this.authorization=authorization;this.actorProvider=actorProvider;
+        this.stateCache=stateCache==null?new NoopTaskStateCache():stateCache; this.eventPublisher=eventPublisher==null?new NoopTaskEventPublisher():eventPublisher;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
     public static Instant now() { return Instant.now().truncatedTo(ChronoUnit.MICROS); }
@@ -77,6 +81,7 @@ public class TaskQueueStore {
                 jdbc.update("INSERT INTO task_queue(task_id,next_run_at) VALUES(?,?)",task.getId(),timestamp(time));
                 jdbc.update("INSERT INTO instance_task_locks(instance_id,task_id) VALUES(?,?)",instance.getId(),task.getId());
                 repository.appendEvent(task.getId(),1,null,TaskStatus.PENDING,"operator","ACCEPTED",time);
+                stateCache.put(task); eventPublisher.publish(task.getId(),1,null,TaskStatus.PENDING,"operator","ACCEPTED",time);
                 return repository.findById(task.getId()).orElseThrow();
             });
         } catch(DuplicateKeyException e) {
@@ -150,6 +155,7 @@ public class TaskQueueStore {
         if(stopped(state)) task.setFinishedAt(time);
         if(!repository.updateState(task,current.version(),accepted)) throw new IllegalStateException("task state CAS failed while locked");
         repository.appendEvent(task.getId(),current.version()+1,previous,state,"worker",code,time);
+        stateCache.put(task); eventPublisher.publish(task.getId(),current.version()+1,previous,state,"worker",code,time);
     }
     public static boolean stopped(TaskStatus state) { return state==TaskStatus.SUCCEEDED||state==TaskStatus.FAILED||state==TaskStatus.UNKNOWN; }
 }
