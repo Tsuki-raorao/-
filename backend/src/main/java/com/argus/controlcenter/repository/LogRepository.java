@@ -39,7 +39,7 @@ public class LogRepository {
     public long count() { return jdbc.queryForObject("SELECT COUNT(*) FROM logs", Long.class); }
     public int deleteByInstanceId(String instanceId) { return jdbc.update("DELETE FROM logs WHERE instance_id=?", instanceId); }
     private boolean hasProjectColumn() {
-        try { return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='logs' AND LOWER(COLUMN_NAME)='project_id'", Integer.class) > 0; }
+        try { jdbc.query("SELECT project_id FROM logs WHERE 1=0", rs -> { }); return true; }
         catch (RuntimeException ignored) { return false; }
     }
 }
