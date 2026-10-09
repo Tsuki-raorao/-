@@ -27,6 +27,9 @@ public class LogRepository {
     public LogEntry save(LogEntry value) {
         if (hasProjectColumn()) {
             String project = jdbc.query("SELECT project_id FROM instances WHERE id=?", rs -> rs.next() ? rs.getString(1) : null, value.getInstanceId());
+            // Agent may deliver a delayed log after an instance was removed; do not let one stale row
+            // terminate the control center because logs are observational data.
+            if (project == null) return value;
             if (project == null || project.isBlank()) project = IdentityConstants.LEGACY_PROJECT_ID;
             jdbc.update("INSERT INTO logs (id,instance_id,log_timestamp,level,message,project_id) VALUES (?,?,?,?,?,?)", value.getId(), value.getInstanceId(), Timestamp.from(value.getTimestamp()), value.getLevel(), value.getMessage(), project);
             return value;
@@ -36,7 +39,7 @@ public class LogRepository {
     public long count() { return jdbc.queryForObject("SELECT COUNT(*) FROM logs", Long.class); }
     public int deleteByInstanceId(String instanceId) { return jdbc.update("DELETE FROM logs WHERE instance_id=?", instanceId); }
     private boolean hasProjectColumn() {
-        try { return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='LOGS' AND COLUMN_NAME='PROJECT_ID'", Integer.class) > 0; }
+        try { return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='logs' AND LOWER(COLUMN_NAME)='project_id'", Integer.class) > 0; }
         catch (RuntimeException ignored) { return false; }
     }
 }
