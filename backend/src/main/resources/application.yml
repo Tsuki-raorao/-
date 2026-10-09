@@ -74,3 +74,10 @@ argus:
     read-timeout: ${ARGUS_AGENT_GATEWAY_READ_TIMEOUT:5s}
     sync-initial-delay-ms: ${ARGUS_AGENT_SYNC_INITIAL_DELAY_MS:5000}
     sync-interval-ms: ${ARGUS_AGENT_SYNC_INTERVAL_MS:60000}
+  ai:
+    enabled: ${ARGUS_AI_ENABLED:false}
+    base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
+    model: ${SILICONFLOW_MODEL:deepseek-ai/DeepSeek-V4-Flash}
+    api-key: ${SILICONFLOW_API_KEY:}
+    timeout: ${ARGUS_AI_TIMEOUT:30s}
+    max-tokens: ${ARGUS_AI_MAX_TOKENS:800}

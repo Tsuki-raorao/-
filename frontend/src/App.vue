@@ -16,6 +16,7 @@ import { clearLegacySecrets, recoveryScope, scopedIntentStorage, readRecovery } 
 type Page = 'overview' | 'nodes' | 'instances' | 'tasks' | 'logs' | 'access'
 const nav = [{ id: 'overview', label: '概览', icon: '◈' }, { id: 'nodes', label: '节点', icon: '⌘' }, { id: 'instances', label: '实例', icon: '▣' }, { id: 'tasks', label: '任务', icon: '✓' }, { id: 'logs', label: '日志', icon: '≡' }, { id: 'access', label: '成员权限', icon: '♙' }] as const
 const page = ref<Page>(readPage())
+const landing = ref(typeof window !== 'undefined' && !window.location.hash)
 const nodes = ref<NodeItem[]>([])
 const instances = ref<Instance[]>([])
 const tasks = ref<Task[]>([])
@@ -67,7 +68,7 @@ function readPage(): Page {
   const candidate = window.location.hash.replace(/^#\/?/, '')
   return nav.some(item => item.id === candidate) ? candidate as Page : 'overview'
 }
-function syncPageFromLocation() { page.value = readPage() }
+function syncPageFromLocation() { landing.value = !window.location.hash; page.value = readPage() }
 function logTargetLabel(item: Instance): string {
   return `${nodeMap.value.get(item.nodeId)?.name || item.node} · ${item.name} (${item.agentInstanceId || '未报告容器标识'}) · ${item.id}`
 }
@@ -342,7 +343,7 @@ async function confirmPending() {
 }
 function go(nextPage: Page) {
   if (page.value !== nextPage) window.history.pushState({}, '', `#/${nextPage}`)
-  page.value = nextPage
+  landing.value = false; page.value = nextPage
 }
 function showUnavailable(feature: string) { notice.value = `${feature}功能将在后续版本开放` }
 
@@ -372,7 +373,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell">
+  <div v-if="landing" class="landing">
+    <header class="landing-nav"><a class="landing-brand" href="/" aria-label="未序首页"><img src="/logo.png" alt="未序" /></a><nav><a href="#product">产品概览</a><a href="#capability">核心能力</a><a href="#docs">开发路线</a></nav><button class="landing-console" @click="go('overview')">进入控制台 <span>↗</span></button></header>
+    <main><section class="landing-hero"><div class="hero-copy"><p class="landing-eyebrow">WEIXU / ARGUS</p><h1>让每一台服务器，<br />都有清晰的秩序。</h1><p class="hero-lead">将分散的节点、服务与运行信息，汇聚到一个工作台。<br />从 Minecraft 开始，面向更多服务。</p><div class="hero-actions"><button class="hero-primary" @click="go('overview')">进入控制台 <span>→</span></button><a class="hero-secondary" href="#capability">查看项目能力</a></div><p class="hero-note">持续开发中 · 当前功能以控制台状态为准</p></div><div class="hero-art"><div class="art-halo"></div><img src="/weixu-niang.png" alt="未序娘" /></div></section><section id="capability" class="landing-section capability"><div class="section-title"><p class="landing-eyebrow">FROM NODE TO SERVICE</p><h2>从节点到服务，<br />信息始终贯通。</h2><p>无论是单个服务器，还是多样的服务实例，都在同一个工作台中，保持清晰的上下文。</p></div><div class="capability-grid"><article><b>01</b><h3>统一查看节点</h3><p>集中查看服务器健康状态与资源使用情况。</p></article><article><b>02</b><h3>跟踪服务状态</h3><p>掌握实例运行状态、采集时间与数据来源。</p></article><article><b>03</b><h3>留下操作记录</h3><p>任务、日志与人工核对记录可追溯。</p></article><article><b>04</b><h3>从日志定位问题</h3><p>通过运行日志和任务事件快速定位问题。</p></article></div></section><section id="product" class="landing-band"><div><p class="landing-eyebrow">ARGUS CONTROL CENTER</p><h2>少一点来回切换，<br />多一点掌控。</h2><p>节点状态、服务实例、任务与日志，在一个清晰的控制台里连接起来。</p></div><button class="hero-primary" @click="go('overview')">打开控制台 <span>→</span></button></section><section id="docs" class="landing-roadmap"><p class="landing-eyebrow">ROADMAP</p><h2>一步一步，走向智能运维。</h2><div class="roadmap-line"><div><b>当前</b><strong>节点与实例</strong><span>任务与日志基础链路</span></div><div><b>持续完善</b><strong>操作闭环</strong><span>可靠投递与人工核对</span></div><div><b>后续规划</b><strong>AI 辅助排障</strong><span>在可验证数据上提供建议</span></div></div></section></main><footer class="landing-footer"><img src="/logo.png" alt="未序" /><span>wx-s.cn</span><span>智能运维控制台 · 持续建设中</span></footer>
+  </div>
+  <div v-else class="shell">
     <aside class="sidebar" :inert="Boolean(confirmation)">
       <div class="brand"><img class="brand-logo" src="/logo.png?v=20261007" alt="未序 Logo" /><small>智能运维控制台</small></div>
       <div class="workspace"><span :class="['dot', connected ? 'online' : 'offline']"></span><div><small>当前工作区</small><strong>我的服务器</strong></div></div>
