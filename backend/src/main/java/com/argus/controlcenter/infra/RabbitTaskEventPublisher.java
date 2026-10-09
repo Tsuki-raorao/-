@@ -24,6 +24,7 @@ public class RabbitTaskEventPublisher implements TaskEventPublisher {
     @Override public void publish(String taskId,long sequence,TaskStatus from,TaskStatus to,String actor,String reason,Instant occurredAt) {
         Map<String,Object> event=new LinkedHashMap<>(); event.put("eventType","task.status.changed"); event.put("taskId",taskId); event.put("sequence",sequence);
         event.put("fromStatus",from==null?null:from.name()); event.put("toStatus",to.name()); event.put("actor",actor); event.put("reason",reason); event.put("occurredAt",occurredAt.toString());
-        try { rabbit.convertAndSend(exchange,routingKey,json.writeValueAsString(event)); } catch (JsonProcessingException | RuntimeException ignored) { /* 事实可由 Outbox 重发 */ }
+        try { rabbit.convertAndSend(exchange,routingKey,json.writeValueAsString(event)); }
+        catch (JsonProcessingException failure) { throw new IllegalStateException("task event serialization failed", failure); }
     }
 }
