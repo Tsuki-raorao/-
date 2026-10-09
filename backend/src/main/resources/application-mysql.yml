@@ -12,6 +12,9 @@ spring:
     enabled: true
     locations: classpath:db/migration
 argus:
+  identity:
+    test-data:
+      enabled: ${ARGUS_IDENTITY_TEST_DATA_ENABLED:false}
   security:
     # MySQL profile 默认 fail-closed；只有明确关闭才允许本地调试写接口。
     read-only: ${ARGUS_API_READ_ONLY:true}

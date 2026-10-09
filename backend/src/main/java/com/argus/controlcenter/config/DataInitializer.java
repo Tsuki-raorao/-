@@ -3,6 +3,7 @@ package com.argus.controlcenter.config;
 import com.argus.controlcenter.service.InstanceService;
 import com.argus.controlcenter.service.LogService;
 import com.argus.controlcenter.service.NodeService;
+import com.argus.controlcenter.identity.IdentityTestDataInitializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -22,20 +23,24 @@ public class DataInitializer {
             NodeService nodes,
             InstanceService instances,
             LogService logs,
+            IdentityTestDataInitializer identityTestData,
+            @Value("${argus.identity.test-data.enabled:false}") boolean identityTestDataEnabled,
             @Value("${argus.demo-data.enabled:true}") boolean demoDataEnabled) {
         return args -> {
-            if (!demoDataEnabled) {
-                return;
+            if (demoDataEnabled) {
+                // 按外键依赖顺序创建：节点 -> 实例 -> 日志。
+                if (nodes.count() == 0) {
+                    nodes.seed();
+                }
+                if (instances.count() == 0) {
+                    instances.seed();
+                }
+                if (logs.count() == 0) {
+                    logs.seed();
+                }
             }
-            // 按外键依赖顺序创建：节点 -> 实例 -> 日志。
-            if (nodes.count() == 0) {
-                nodes.seed();
-            }
-            if (instances.count() == 0) {
-                instances.seed();
-            }
-            if (logs.count() == 0) {
-                logs.seed();
+            if (identityTestDataEnabled) {
+                identityTestData.seed();
             }
         };
     }
