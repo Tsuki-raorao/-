@@ -1,6 +1,6 @@
 # Argus 接口约定
 
-更新：2026-10-09。以下为当前源码契约，包含本轮尚未部署的 V6 人工核对。生产仍为此前 V5 只读版本，双节点 8 个 Docker 实例、日志与浏览器验收通过，业务控制关闭。最新验收/部署状态见 [开发进度](开发进度.md)。控制中心使用统一外壳 `{ "code": 0, "message": "ok", "data": ... }`，Agent 原生接口不使用此外壳。
+更新：2026-10-09。以下为当前源码契约，V6 人工核对已随只读版本部署；双节点 8 个当前 Docker 实例和日志已核验，生产业务控制与核对开关均关闭。没有生产核对任务样本，不把接口部署等同于真实核对操作验收。最新状态见 [开发进度](开发进度.md)。控制中心使用统一外壳 `{ "code": 0, "message": "ok", "data": ... }`，Agent 原生接口不使用此外壳。
 
 ## 控制中心
 
@@ -85,7 +85,7 @@ Task 保留 `id/instanceId/action/status/message/createdAt/finishedAt`，新增 
 
 常见网关错误：禁用或非只读配置返回 503，白名单不允许返回 403，远端失败/日志格式错误返回 502，不存在的中央实例返回 404。以 HTTP 状态和统一外壳共同判断，不能只看 `data` 是否为空。
 
-### 独立 UNKNOWN 人工核对（V6，未部署）
+### 独立 UNKNOWN 人工核对（V6，生产开关关闭）
 
 完整形状和处理顺序以[UNKNOWN 任务人工核对契约](UNKNOWN任务人工核对设计.md)为准。能力返回 `reviewEnabled/canReview/canRecheck/allowedDecisions/reason/blocksInstance/resolutionId`。核对使用操作令牌、独立开关及允许名单；不要求容器动作开关打开，但全局只读优先。查看者可 GET 记录，不能 POST 或续办，actor 由服务端确定。
 
