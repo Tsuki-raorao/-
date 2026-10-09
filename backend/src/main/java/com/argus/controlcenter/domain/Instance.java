@@ -12,6 +12,8 @@ public class Instance {
     private String name;
     /** 所属节点 ID，对应 nodes.id。 */
     private String nodeId;
+    /** 所属项目；节点及其实例在身份模式下不可跨项目转移。 */
+    private String projectId;
     /** 实例对应的容器名称。 */
     private String containerName;
     /** 服务版本，例如 1.21.1-NeoForge。 */
@@ -49,6 +51,8 @@ public class Instance {
     public void setName(String name) { this.name = name; }
     public String getNodeId() { return nodeId; }
     public void setNodeId(String nodeId) { this.nodeId = nodeId; }
+    public String getProjectId() { return projectId; }
+    public void setProjectId(String projectId) { this.projectId = projectId; }
     public String getContainerName() { return containerName; }
     public void setContainerName(String containerName) { this.containerName = containerName; }
     public String getVersion() { return version; }

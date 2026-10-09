@@ -10,6 +10,8 @@ public class Node {
     private String name;
     /** Agent 的访问地址或节点主机地址。 */
     private String address;
+    /** 节点所属项目；身份模式下节点整体归属且不可跨项目转移。 */
+    private String projectId;
     /** 当前连接状态。 */
     private NodeStatus status;
     /** 最近一次心跳时间；从未收到心跳时为 null。 */
@@ -43,6 +45,8 @@ public class Node {
     public void setName(String name) { this.name = name; }
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+    public String getProjectId() { return projectId; }
+    public void setProjectId(String projectId) { this.projectId = projectId; }
     public NodeStatus getStatus() { return status; }
     public void setStatus(NodeStatus status) { this.status = status; }
     public Instant getLastHeartbeat() { return lastHeartbeat; }

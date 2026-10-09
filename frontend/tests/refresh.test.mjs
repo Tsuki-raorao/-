@@ -13,6 +13,8 @@ const logs = await loadTs('logs')
 const taskControl = await loadTs('task-control')
 const taskDetail = await loadTs('task-detail')
 const taskResolution = await loadTs('task-resolution')
+const authSession = await loadTs('auth-session')
+const scopedRecovery = await loadTs('scoped-recovery')
 const { descriptor } = parse(readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8'))
 const componentCode = ts.transpileModule(compileScript(descriptor, { id: 'refresh-test' }).content, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }
@@ -24,6 +26,7 @@ function component(api) {
     vue: { ...vue, onMounted() {}, onUnmounted() {}, watch() {} },
     './api': { api, ApiRequestError, getApiToken: () => '', clearApiToken() {}, saveApiToken() {} },
     './models': models, './logs': logs, './task-control': taskControl, './task-detail': taskDetail, './task-resolution': taskResolution,
+    './auth-session': authSession, './scoped-recovery': scopedRecovery,
     './components/InstanceTable.vue': { default: {} }, './components/TaskDetail.vue': { default: {} }, './components/TaskResolution.vue': { default: {} }
   }
   const exports = {}

@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.argus.controlcenter.identity.*;
 
 /** 所有数据库状态转换均为短事务；此类绝不执行 HTTP。 */
 @Service
@@ -26,19 +28,39 @@ public class TaskQueueStore {
     private final AgentCommandGateway gateway;
     private final TaskControlProperties properties;
     private final TransactionTemplate tx;
+    private final ProjectAuthorization authorization;
+    private final CurrentActorProvider actorProvider;
+    @Deprecated
     public TaskQueueStore(JdbcTemplate jdbc,TaskRepository repository,NodeRepository nodes,InstanceRepository instances,
                           TaskControlPolicy policy,AgentCommandGateway gateway,TaskControlProperties properties,PlatformTransactionManager manager) {
+        this(jdbc,repository,nodes,instances,policy,gateway,properties,manager,null,null);
+    }
+    @Autowired
+    public TaskQueueStore(JdbcTemplate jdbc,TaskRepository repository,NodeRepository nodes,InstanceRepository instances,
+                          TaskControlPolicy policy,AgentCommandGateway gateway,TaskControlProperties properties,PlatformTransactionManager manager,
+                          ProjectAuthorization authorization,CurrentActorProvider actorProvider) {
         this.jdbc=jdbc;this.repository=repository;this.nodes=nodes;this.instances=instances;this.policy=policy;this.gateway=gateway;this.properties=properties;
+        this.authorization=authorization;this.actorProvider=actorProvider;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
     public static Instant now() { return Instant.now().truncatedTo(ChronoUnit.MICROS); }
     private static java.sql.Timestamp timestamp(Instant value) { return value==null?null:java.sql.Timestamp.from(value); }
     public Task enqueue(Instance expected,String address,String action,String mode,String key,AgentCommandGateway.Health health) {
+        CurrentActor actor=actorProvider==null?new CurrentActor(IdentityConstants.LEGACY_USER_ID,AuthMode.LEGACY_TOKEN,PlatformRole.SYSTEM_LEGACY,true):actorProvider.current();
+        return enqueue(expected,address,action,mode,key,health,expected.getProjectId(),actor);
+    }
+    public Task enqueue(Instance expected,String address,String action,String mode,String key,AgentCommandGateway.Health health,String projectId,CurrentActor actor) {
         try {
             return tx.execute(ignored -> {
+                if(authorization!=null && authorization.isIdentityMode()) {
+                    authorization.requireForUpdate(actor.userId(),actor.authMode(),projectId,ProjectPermission.TASK_OPERATE);
+                }
                 Node node=nodes.findByIdForUpdate(expected.getNodeId()).orElseThrow(()->new NotFoundException("node not found"));
                 Instance instance=instances.findByIdForUpdate(expected.getId()).orElseThrow(()->new NotFoundException("instance not found"));
-                Optional<TaskCommand> prior=repository.findByKey(key);
+                if(authorization!=null && authorization.isIdentityMode() && !projectId.equals(instance.getProjectId()))
+                    throw new TaskControlException(404,"REQUEST_NOT_FOUND");
+                Optional<TaskCommand> prior=authorization!=null && authorization.isIdentityMode()
+                        ? repository.findByKey(projectId,actor.userId(),key) : repository.findByKey(key);
                 if(prior.isPresent()) return same(prior.get(),instance.getId(),action,mode);
                 policy.requireTarget(instance.getId(),mode);
                 if(!instance.getNodeId().equals(expected.getNodeId()) || !instance.getAgentInstanceId().equals(expected.getAgentInstanceId())
@@ -49,7 +71,8 @@ public class TaskQueueStore {
                 Instant time=now();
                 Task task=new Task(UUID.randomUUID().toString(),instance.getId(),action,TaskStatus.PENDING,"ACCEPTED",time,null);
                 task.setNodeId(instance.getNodeId());task.setAgentInstanceId(instance.getAgentInstanceId());task.setCommandId(UUID.randomUUID().toString());
-                task.setExecutionMode(mode);task.setRequestedBy("operator");task.setUpdatedAt(time);task.setResultCode("ACCEPTED");
+                task.setExecutionMode(mode);task.setRequestedBy("operator");task.setProjectId(projectId);task.setActorUserId(actor.userId());task.setAuthMode(actor.authMode().name());
+                task.setUpdatedAt(time);task.setResultCode("ACCEPTED");
                 repository.insert(new TaskCommand(task,key,address,health.nodeId(),health.storeId(),time.plus(properties.getCommandTtl()).truncatedTo(ChronoUnit.MICROS),1,false));
                 jdbc.update("INSERT INTO task_queue(task_id,next_run_at) VALUES(?,?)",task.getId(),timestamp(time));
                 jdbc.update("INSERT INTO instance_task_locks(instance_id,task_id) VALUES(?,?)",instance.getId(),task.getId());

@@ -25,7 +25,11 @@ public class NodeService {
     }
     public List<Node> findAll() { return repository.findAll(); }
     public Node findById(String id) { return repository.findById(id).orElseThrow(() -> new NotFoundException("node not found: " + id)); }
-    public Node create(CreateNodeRequest request) { return repository.save(new Node(UUID.randomUUID().toString(), request.getName(), request.getAddress(), NodeStatus.UNKNOWN, null)); }
+    public Node create(CreateNodeRequest request) { return create(request, null); }
+    public Node create(CreateNodeRequest request, String projectId) {
+        Node node=new Node(UUID.randomUUID().toString(), request.getName(), request.getAddress(), NodeStatus.UNKNOWN, null);
+        node.setProjectId(projectId); return repository.save(node);
+    }
     public Node heartbeat(String id, NodeStatus status) {
         Node n = findById(id);
         n.setStatus(status == null ? NodeStatus.ONLINE : status);

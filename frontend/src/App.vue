@@ -9,6 +9,8 @@ import InstanceTable from './components/InstanceTable.vue'
 import TaskDetail from './components/TaskDetail.vue'
 import TaskResolution from './components/TaskResolution.vue'
 import { readReviewIntent } from './task-resolution'
+import { authSession, type AuthState } from './auth-session'
+import { clearLegacySecrets, recoveryScope, scopedIntentStorage, readRecovery } from './scoped-recovery'
 
 type Page = 'overview' | 'nodes' | 'instances' | 'tasks' | 'logs'
 const nav = [{ id: 'overview', label: '概览', icon: '◈' }, { id: 'nodes', label: '节点', icon: '⌘' }, { id: 'instances', label: '实例', icon: '▣' }, { id: 'tasks', label: '任务', icon: '✓' }, { id: 'logs', label: '日志', icon: '≡' }] as const
@@ -28,6 +30,9 @@ const autoRefresh = ref(true)
 const authRequired = ref(false)
 const tokenInput = ref('')
 const hasApiToken = ref(Boolean(getApiToken()))
+const authState = ref<AuthState>(authSession.get())
+const identityMode = computed(() => authState.value.config?.mode === 'OIDC_IDENTITY')
+const authUnsubscribe = authSession.subscribe(next => { authState.value = next })
 const editToken = ref(false)
 const capabilities = ref<Capabilities>(disabledCapabilities())
 const intentState = ref<IntentState>({ intent: null, phase: 'idle', error: '' })
@@ -36,6 +41,9 @@ const selectedTask = ref('')
 const taskDetail = ref<TaskDetailState>({ id: '', phase: 'idle', task: null, events: [], error: '' })
 const pendingReviewTask = ref(''), pendingReviewError = ref('')
 function readReviewRecovery() {
+  // OIDC 模式只保留按用户/项目隔离的最小 requestKey；没有跨重载恢复 taskId，
+  // 由 bootstrapAuth 通过只读 by-request-key 查询对账，避免把旧身份的正文带入当前项目。
+  if (identityMode.value) { pendingReviewTask.value = ''; pendingReviewError.value = ''; return }
   try { pendingReviewTask.value = readReviewIntent(window.sessionStorage)?.taskId || ''; pendingReviewError.value = '' }
   catch { pendingReviewTask.value = ''; pendingReviewError.value = '待确认人工核对记录无法读取；请核对服务端记录，不要创建替代核对。' }
 }
@@ -90,11 +98,26 @@ function loadTaskDetail() {
   return taskReader.select(selectedTask.value)
 }
 watch([page, selectedTask], () => { void loadTaskDetail() }, { flush: 'sync' })
-const intentSender = createIntentSender(api.control, {
-  getItem: key => window.sessionStorage.getItem(key),
-  setItem: (key, value) => window.sessionStorage.setItem(key, value),
-  removeItem: key => window.sessionStorage.removeItem(key)
-}, state => { intentState.value = state })
+const identityIntentStore = () => {
+  try {
+    const scope = recoveryScope(authSession.capture())
+    return scope ? scopedIntentStorage(window.sessionStorage, scope, 'action') : null
+  } catch { return null }
+}
+const intentStorage = {
+  getItem: (key: string) => authState.value.config?.mode === 'OIDC_IDENTITY' ? identityIntentStore()?.getItem(key) || null : window.sessionStorage.getItem(key),
+  setItem: (key: string, value: string) => {
+    if (authState.value.config?.mode === 'OIDC_IDENTITY') {
+      const store = identityIntentStore(); if (!store) throw Error('身份或项目尚未确认，未保存请求标识'); store.setItem(key, value); return
+    }
+    window.sessionStorage.setItem(key, value)
+  },
+  removeItem: (key: string) => {
+    if (authState.value.config?.mode === 'OIDC_IDENTITY') { identityIntentStore()?.removeItem(key); return }
+    window.sessionStorage.removeItem(key)
+  }
+}
+const intentSender = createIntentSender(api.control, intentStorage, state => { intentState.value = state })
 watch(confirmation, async value => { if (value) { await nextTick(); document.getElementById('cancel-action')?.focus() } })
 function trapConfirmation(event: KeyboardEvent) {
   if (event.key !== 'Tab') return
@@ -153,6 +176,47 @@ async function load() {
   }
 }
 
+async function bootstrapAuth() {
+  if (typeof api.authConfig !== 'function') return
+  try {
+    const config = await api.authConfig()
+    authSession.configure(config)
+    if (config.mode === 'LEGACY_TOKEN') return
+    // 进入身份模式时清除旧共享令牌和 v1 正文；旧引用不会被拿来重放。
+    clearLegacySecrets(window.sessionStorage)
+    intentSender.reset?.()
+    const identity = await api.authMe()
+    authSession.identify(identity)
+    const csrf = await api.authCsrf()
+    authSession.setCsrf(csrf)
+    const projects = await api.authProjects()
+    authSession.setProjects(projects)
+    if (authSession.get().project) await reconcileScopedRecovery()
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 401) authSession.expire('登录已失效，请重新登录')
+    else authSession.fail(error instanceof Error ? error.message : '身份信息读取失败，已禁用业务页面')
+  }
+}
+async function reconcileScopedRecovery() {
+  const state = authSession.get(), scope = recoveryScope(authSession.capture())
+  if (!scope) return
+  for (const [kind, lookup, clear] of [
+    ['action', api.taskByRequestKey, (key: string) => scopedIntentStorage(window.sessionStorage, scope, 'action').removeItem('argus.pendingAction.v1')],
+    ['review', api.resolutionByRequestKey, (key: string) => scopedIntentStorage(window.sessionStorage, scope, 'review').removeItem('argus.pendingReview.v1')]
+  ] as const) {
+    const reference = readRecovery(window.sessionStorage, scope, kind)
+    if (!reference) continue
+    try {
+      const result = await lookup(reference.requestKey)
+      if (kind === 'action' && result) mergeTask(result as Task)
+      clear(reference.requestKey)
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 404) clear(reference.requestKey)
+    }
+  }
+  void state
+}
+
 function submitApiToken() {
   const token = tokenInput.value.trim()
   if (!token) { notice.value = '请输入控制中心访问令牌'; return }
@@ -180,6 +244,10 @@ function invalidateRequests() {
   pendingReviewTask.value = ''; pendingReviewError.value = ''
   taskReader.cancel()
 }
+function clearActiveIntent() {
+  intentSender.reset?.()
+  intentState.value = { intent: null, phase: 'idle', error: '' }
+}
 function removeApiToken() {
   invalidateRequests()
   clearApiToken()
@@ -187,6 +255,20 @@ function removeApiToken() {
   authRequired.value = true
   tokenInput.value = ''
 }
+function login() { api.authLogin() }
+async function logout() {
+  try { if (identityMode.value) await api.authLogout() } catch { /* 失效会话仍需清理本地页面。 */ }
+  clearLegacySecrets(window.sessionStorage)
+  authSession.expire('已退出登录，请重新登录')
+  clearActiveIntent()
+  invalidateRequests()
+  hasApiToken.value = false
+}
+function selectProject(id: string) {
+  try { authSession.selectProject(id); clearActiveIntent(); invalidateRequests(); void load(); void reconcileScopedRecovery() }
+  catch (error) { notice.value = error instanceof Error ? error.message : '项目切换失败' }
+}
+function changeProject(event: Event) { selectProject((event.target as HTMLSelectElement).value) }
 
 function actionReason(instance: Instance, action: TaskAction): string {
   if (loading.value || !connected.value) return '控制中心状态尚未验证'
@@ -258,8 +340,10 @@ function showUnavailable(feature: string) { notice.value = `${feature}功能将�
 
 let refreshTimer: number | undefined
 let clockTimer: number | undefined
+function onAuthExpired() { authSession.expire('登录或项目权限已失效，请重新验证'); clearActiveIntent(); invalidateRequests() }
 onMounted(() => {
-  void load()
+  void bootstrapAuth().then(() => { if (!identityMode.value || authState.value.phase === 'ready' || authState.value.phase === 'legacy') void load() })
+  window.addEventListener('argus-auth-expired', onAuthExpired)
   window.addEventListener('hashchange', syncPageFromLocation)
   window.addEventListener('popstate', syncPageFromLocation)
   refreshTimer = window.setInterval(() => { if (autoRefresh.value && !loading.value) void load() }, 15000)
@@ -272,8 +356,10 @@ onUnmounted(() => {
   intentSender.invalidate()
   window.removeEventListener('hashchange', syncPageFromLocation)
   window.removeEventListener('popstate', syncPageFromLocation)
+  window.removeEventListener('argus-auth-expired', onAuthExpired)
   if (refreshTimer) window.clearInterval(refreshTimer)
   if (clockTimer) window.clearInterval(clockTimer)
+  authUnsubscribe()
 })
 </script>
 
@@ -286,12 +372,15 @@ onUnmounted(() => {
       <div class="sidebar-bottom"><div class="profile"><img class="avatar avatar-image" src="/weixu-niang.png" alt="未序娘" /><div><b>未序娘</b><small>形象展示 · AI 尚未接入</small></div></div></div>
     </aside>
     <main class="main" :inert="Boolean(confirmation)">
-      <header class="topbar"><div class="crumb">工作区 <span>/</span> <b>{{ currentLabel }}</b></div><div class="top-actions"><span class="connection"><i :class="{ offline: !connected }"></i>{{ loading ? '正在读取' : connected ? '控制中心可访问' : '控制中心不可用' }}</span><button class="auth-clear" @click="editToken = !editToken">{{ hasApiToken ? '更换令牌' : '输入令牌' }}</button><button v-if="hasApiToken" class="auth-clear" @click="removeApiToken">清除令牌</button><img class="top-avatar avatar-image" src="/weixu-niang.png" alt="未序娘" /></div></header>
+      <header class="topbar"><div class="crumb">工作区 <span>/</span> <b>{{ currentLabel }}</b></div><div class="top-actions"><span class="connection"><i :class="{ offline: !connected }"></i>{{ loading ? '正在读取' : connected ? '控制中心可访问' : '控制中心不可用' }}</span><template v-if="!identityMode"><button class="auth-clear" @click="editToken = !editToken">{{ hasApiToken ? '更换令牌' : '输入令牌' }}</button><button v-if="hasApiToken" class="auth-clear" @click="removeApiToken">清除令牌</button></template><template v-else-if="authState.identity"><span class="identity-label">{{ authState.identity.displayName }}</span><button class="auth-clear" @click="logout">退出</button></template><img class="top-avatar avatar-image" src="/weixu-niang.png" alt="未序娘" /></div></header>
       <div class="content">
-        <div class="page-head"><div><p class="eyebrow">ARGUS / {{ currentLabel }}</p><h1>{{ page === 'overview' ? '欢迎回来' : currentLabel }}</h1><p class="subtitle">按采集时间查看节点和实例，过期状态会明确标记。</p></div><button class="refresh" :disabled="loading" @click="load">↻ <span>刷新数据</span></button></div>
-        <div v-if="authRequired || editToken" class="auth-banner"><div><strong>连接控制中心</strong><p>可输入查看或操作令牌；权限由服务端核验。仅保存在当前浏览器会话。</p></div><div class="auth-actions"><input v-model="tokenInput" type="password" placeholder="粘贴 Bearer 令牌" aria-label="访问令牌" @keyup.enter="submitApiToken" /><button class="primary" @click="submitApiToken">连接</button></div></div>
+        <div class="page-head"><div><p class="eyebrow">ARGUS / {{ currentLabel }}</p><h1>{{ page === 'overview' ? '欢迎回来' : currentLabel }}</h1><p class="subtitle">按采集时间查看节点和实例，过期状态会明确标记。</p></div><button class="refresh" :disabled="loading || identityMode && (authState.phase !== 'ready' || !authState.project)" @click="load">↻ <span>刷新数据</span></button></div>
+        <div v-if="identityMode && (authState.phase === 'anonymous' || authState.phase === 'error')" class="auth-banner"><div><strong>登录控制中心</strong><p>{{ authState.error || '使用组织身份登录；网页不保存 OIDC 令牌。' }}</p></div><div class="auth-actions"><button class="primary" @click="login">登录</button></div></div>
+        <div v-else-if="!identityMode && (authRequired || editToken)" class="auth-banner"><div><strong>连接控制中心</strong><p>可输入查看或操作令牌；权限由服务端核验。仅保存在当前浏览器会话。</p></div><div class="auth-actions"><input v-model="tokenInput" type="password" placeholder="粘贴 Bearer 令牌" aria-label="访问令牌" @keyup.enter="submitApiToken" /><button class="primary" @click="submitApiToken">连接</button></div></div>
         <div v-if="loadError" class="data-banner error" role="alert">读取失败：{{ loadError }}。未使用演示数据替代。</div>
-        <div v-if="readOnly" class="data-banner">当前为只读模式：可以查询快照和 Agent 最近日志，写操作关闭。</div>
+        <div v-if="identityMode && authState.identity" class="data-banner project-bar"><label for="project-select">当前项目</label><select id="project-select" :value="authState.project?.id || ''" :disabled="authState.phase !== 'ready'" @change="changeProject"><option value="" disabled>{{ authState.project ? '请选择项目' : '没有可读项目' }}</option><option v-for="project in authState.projects" :key="project.id" :value="project.id" :disabled="project.status !== 'ACTIVE' || !project.permissions.includes('RESOURCE_READ')">{{ project.name }} · {{ project.role }}</option></select><span>{{ authState.identity.displayName }}</span><button class="text-btn" @click="logout">退出登录</button></div>
+        <div v-if="identityMode && authState.identity && !authState.project" class="data-banner error" role="alert">当前身份没有可读项目，观察和操作请求已关闭。请联系项目管理员加入项目后重新登录。</div>
+        <div v-if="readOnly || identityMode && authState.config?.readOnly" class="data-banner">当前为只读模式：可以查询快照和 Agent 最近日志，写操作关闭。</div>
         <div v-if="hasMockData" class="data-banner mock" role="status">页面包含模拟数据，相关条目已标记，不代表真实服务器状态。</div>
         <div v-if="connected && (pendingReviewTask || pendingReviewError)" class="data-banner pending-review-recovery" role="status"><strong>人工核对提交仍需确认</strong><p>{{ pendingReviewError || '保留了原请求标识。打开原任务会先查询已有核对记录，不自动重新提交。' }}</p><button v-if="pendingReviewTask" class="text-btn" @click="showTask(pendingReviewTask)">恢复待确认人工核对</button></div>
         <div v-if="intentState.phase !== 'idle'" class="data-banner pending-intent" role="status"><strong>{{ intentState.phase === 'submitting' ? '正在等待排队确认' : '提交结果待确认' }}</strong><p v-if="intentState.intent">{{ executionLabel(intentState.intent.expectedExecutionMode) }} · {{ actionLabel(intentState.intent.action) }} {{ intentState.intent.name }} · 节点 {{ intentState.intent.nodeId }} · 实例 {{ intentState.intent.instanceId }}</p><p>{{ intentState.error || '请等待，重复点击不会创建新命令。' }}</p><p>待确认请求保留原标识。核对会重送同一个请求；如果之前未入队，本次可能首次排队。</p><button v-if="intentState.phase === 'uncertain' && intentState.intent" class="refresh" :disabled="!canConfirmPending" @click="confirmPending">用原请求核对</button><p v-if="intentState.phase === 'uncertain' && !canConfirmPending">恢复连接并验证操作权限后可核对。不要清理浏览器中的待确认记录。</p></div>

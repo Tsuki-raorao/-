@@ -3,6 +3,8 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../api'
 import { executionLabel, taskStatusLabel, timeLabel, type Task } from '../models'
 import { newIntentKey } from '../task-control'
+import { authSession } from '../auth-session'
+import { recoveryScope, scopedIntentStorage } from '../scoped-recovery'
 import { assertReviewIdentity, createReviewSender, disabledReview, matchesReviewIntent, normalizeReviewBody, resolutionIntent, resolutionStatusLabel, reviewReasonLabel, REVIEW_DECISION,
   type Resolution, type ResolutionEvent, type ReviewCapabilities, type ReviewEvidence, type ReviewIntent, type ReviewIntentState } from '../task-resolution'
 
@@ -19,9 +21,12 @@ const reason = ref(''), manualEvidence = ref(''), noReplay = ref(false), residua
 const intentState = ref<ReviewIntentState>({ phase: 'idle', intent: null, error: '' })
 let generation = 0, evidenceGeneration = 0, alive = true
 let controller: AbortController | undefined, evidenceController: AbortController | undefined, timer: number | undefined
-const sender = createReviewSender(api.resolveTask, {
-  getItem: key => window.sessionStorage.getItem(key), setItem: (key, value) => window.sessionStorage.setItem(key, value), removeItem: key => window.sessionStorage.removeItem(key)
-}, value => { intentState.value = value })
+const reviewStorage = {
+  getItem: (key: string) => { try { const scope = recoveryScope(authSession.capture()); return scope ? scopedIntentStorage(window.sessionStorage, scope, 'review').getItem(key) : window.sessionStorage.getItem(key) } catch { return null } },
+  setItem: (key: string, value: string) => { const scope = recoveryScope(authSession.capture()); if (scope) scopedIntentStorage(window.sessionStorage, scope, 'review').setItem(key, value); else window.sessionStorage.setItem(key, value) },
+  removeItem: (key: string) => { try { const scope = recoveryScope(authSession.capture()); if (scope) scopedIntentStorage(window.sessionStorage, scope, 'review').removeItem(key); else window.sessionStorage.removeItem(key) } catch { /* 身份已退出时不读取或恢复敏感正文。 */ } }
+}
+const sender = createReviewSender(api.resolveTask, reviewStorage, value => { intentState.value = value })
 const samePending = computed(() => intentState.value.intent?.taskId === props.taskId)
 const conflict = computed(() => samePending.value && record.value && !matchesReviewIntent(record.value, intentState.value.intent!))
 const canSubmit = computed(() => ready.value && !reading.value && !props.readOnly && task.value?.status === 'UNKNOWN'

@@ -104,6 +104,15 @@ export function createIntentSender(
       generation++
       controller?.abort()
       if (state.intent) publish({ ...state, phase: 'uncertain', error: '请求已停止等待，提交结果仍待确认；重新连接后用原请求核对' })
+    },
+    /** 会话或项目边界切换时丢弃内存中的旧意图；其最小引用由上层按旧项目继续对账。 */
+    reset() {
+      generation++
+      controller?.abort()
+      controller = undefined
+      storedError = ''
+      initial = null
+      publish({ intent: null, phase: 'idle', error: '' })
     }
   }
 }

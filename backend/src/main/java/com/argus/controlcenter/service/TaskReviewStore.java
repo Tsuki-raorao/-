@@ -14,6 +14,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.*;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.argus.controlcenter.identity.*;
 
 /** 人工意图/outbox同事务，网络永不进入本类；只精确解除原任务持有的锁。 */
 @Service
@@ -22,9 +24,18 @@ public class TaskReviewStore {
     private final JdbcTemplate jdbc;private final TaskResolutionRepository resolutions;private final TaskRepository tasks;
     private final NodeRepository nodes;private final InstanceRepository instances;private final AgentCommandGateway addresses;
     private final TaskReviewPolicy policy;private final TaskReviewProperties properties;private final TransactionTemplate tx;
+    private final ProjectAuthorization authorization; private final CurrentActorProvider actorProvider;
+    @Deprecated
     public TaskReviewStore(JdbcTemplate jdbc,TaskResolutionRepository resolutions,TaskRepository tasks,NodeRepository nodes,
             InstanceRepository instances,AgentCommandGateway addresses,TaskReviewPolicy policy,TaskReviewProperties properties,PlatformTransactionManager manager) {
+        this(jdbc,resolutions,tasks,nodes,instances,addresses,policy,properties,manager,null,null);
+    }
+    @Autowired
+    public TaskReviewStore(JdbcTemplate jdbc,TaskResolutionRepository resolutions,TaskRepository tasks,NodeRepository nodes,
+            InstanceRepository instances,AgentCommandGateway addresses,TaskReviewPolicy policy,TaskReviewProperties properties,PlatformTransactionManager manager,
+            ProjectAuthorization authorization,CurrentActorProvider actorProvider) {
         this.jdbc=jdbc;this.resolutions=resolutions;this.tasks=tasks;this.nodes=nodes;this.instances=instances;this.addresses=addresses;this.policy=policy;this.properties=properties;
+        this.authorization=authorization;this.actorProvider=actorProvider;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
     private Instant now(){return jdbc.queryForObject("SELECT CURRENT_TIMESTAMP(6)",Timestamp.class).toInstant();}
@@ -55,22 +66,33 @@ public class TaskReviewStore {
             &&Objects.equals(x.getFinishedAt(),y.getFinishedAt())&&Objects.equals(x.getUpdatedAt(),y.getUpdatedAt())&&x.getAttempts()==y.getAttempts()&&a.agentAccepted()==b.agentAccepted();
     }
     public TaskResolution submit(String taskId,String key,ReviewRequest request,boolean operator) {
+        CurrentActor actor=actorProvider==null?new CurrentActor(IdentityConstants.LEGACY_USER_ID,AuthMode.LEGACY_TOKEN,PlatformRole.SYSTEM_LEGACY,true):actorProvider.current();
+        return submit(taskId,key,request,operator,null,actor);
+    }
+    public TaskResolution submit(String taskId,String key,ReviewRequest request,boolean operator,String projectId,CurrentActor actor) {
         try{if(key==null||!UUID.fromString(key).toString().equals(key))throw new IllegalArgumentException();}
         catch(IllegalArgumentException e){throw new IllegalArgumentException("Idempotency-Key must be a canonical UUID");}
-        TaskCommand original=task(taskId);policy.require(operator,original.task().getInstanceId());
+        TaskCommand original=task(taskId);
+        if(authorization!=null&&authorization.isIdentityMode()) {
+            if(projectId==null||projectId.isBlank()) throw new IdentityAuthorizationException("PROJECT_REQUIRED",400);
+            authorization.require(actor,projectId,ProjectPermission.TASK_REVIEW);
+        } else policy.require(operator,original.task().getInstanceId());
         try {
             return tx.execute(ignored->{
+                if(authorization!=null&&authorization.isIdentityMode()) authorization.requireForUpdate(actor.userId(),actor.authMode(),projectId,ProjectPermission.TASK_REVIEW);
                 // 与新动作/节点维护采用同样的节点→实例顺序，再取得原任务。
                 nodes.findByIdForUpdate(original.task().getNodeId()).orElseThrow(()->new NotFoundException("node not found"));
                 instances.findByIdForUpdate(original.task().getInstanceId()).orElseThrow(()->new NotFoundException("instance not found"));
-                TaskCommand current=tasks.lock(taskId);policy.require(operator,current.task().getInstanceId());
-                Optional<Row> prior=resolutions.byKey(key);
+                TaskCommand current=tasks.lock(taskId);
+                if(authorization!=null&&authorization.isIdentityMode()&&!projectId.equals(current.task().getProjectId())) throw new TaskControlException(404,"REQUEST_NOT_FOUND");
+                if(authorization==null||!authorization.isIdentityMode()) policy.require(operator,current.task().getInstanceId());
+                Optional<Row> prior=authorization!=null&&authorization.isIdentityMode()?resolutions.byKey(projectId,actor.userId(),key):resolutions.byKey(key);
                 if(prior.isPresent()) {
                     Row row=resolutions.lock(prior.get().id());same(row,taskId,request);
                     if(row.status().equals("BLOCKED")) {
                         String denial=eligibility(row.original(),false);if(denial!=null)throw new TaskControlException(409,denial);
                         Instant time=now();
-                        change(row,"PENDING","REVIEW_RECHECK_REQUESTED","operator",row.attempts(),0,null,time);
+                        change(row,"PENDING","REVIEW_RECHECK_REQUESTED",actor.userId(),row.attempts(),0,null,time);
                         jdbc.update("INSERT INTO task_resolution_queue(resolution_id,next_run_at) VALUES(?,?)",row.id(),stamp(time));
                         row=resolutions.find(row.id()).orElseThrow();
                     }
@@ -79,13 +101,13 @@ public class TaskReviewStore {
                 if(resolutions.byTask(taskId).isPresent())throw new TaskControlException(409,"TASK_ALREADY_HAS_RESOLUTION");
                 String denial=eligibility(current,false);if(denial!=null)throw new TaskControlException(409,denial);
                 String id=UUID.randomUUID().toString();Instant time=now();
-                resolutions.insert(id,key,current,request,time);
+                resolutions.insert(id,key,current,request,time,projectId,actor.userId(),actor.authMode().name());
                 jdbc.update("INSERT INTO task_resolution_queue(resolution_id,next_run_at) VALUES(?,?)",id,stamp(time));
                 return resolutions.view(resolutions.find(id).orElseThrow());
             });
         }catch(DuplicateKeyException collision) {
-            policy.require(operator,original.task().getInstanceId());
-            Row prior=resolutions.byKey(key).orElseThrow(()->new TaskControlException(409,"TASK_ALREADY_HAS_RESOLUTION"));same(prior,taskId,request);return resolutions.view(prior);
+            if(authorization==null||!authorization.isIdentityMode()) policy.require(operator,original.task().getInstanceId());
+            Row prior=(authorization!=null&&authorization.isIdentityMode()?resolutions.byKey(projectId,actor.userId(),key):resolutions.byKey(key)).orElseThrow(()->new TaskControlException(409,"TASK_ALREADY_HAS_RESOLUTION"));same(prior,taskId,request);return resolutions.view(prior);
         }
     }
     private void same(Row row,String taskId,ReviewRequest request) {
@@ -115,7 +137,7 @@ public class TaskReviewStore {
             if(!owns(claim))return false;
             String denial=eligibility(claim.row().original(),true);
             Row row=resolutions.lock(claim.row().id());
-            if(denial==null)denial=policy.denial(true,row.original().task().getInstanceId());
+            if(denial==null)denial=reviewAuthorizationDenial(row);
             if(denial!=null){blockLocked(row,denial,now());return false;}
             return true;
         }));
@@ -125,7 +147,7 @@ public class TaskReviewStore {
             if(!owns(claim))return false;
             String denial=eligibility(claim.row().original(),true);
             Row row=resolutions.lock(claim.row().id());
-            if(denial==null)denial=policy.denial(true,row.original().task().getInstanceId());
+            if(denial==null)denial=reviewAuthorizationDenial(row);
             if(denial!=null){blockLocked(row,denial,now());return false;}
             if(row.version()!=claim.row().version())return false;
             Task task=row.original().task();Instant time=now();
@@ -147,6 +169,24 @@ public class TaskReviewStore {
         change(row,"BLOCKED",code,"review-worker",row.attempts(),row.cycleAttempts(),null,time);
         jdbc.update("DELETE FROM task_resolution_queue WHERE resolution_id=?",row.id());
     }
+    private String reviewAuthorizationDenial(Row row) {
+        if(authorization==null||!authorization.isIdentityMode()) return policy.denial(true,row.original().task().getInstanceId());
+        try {
+            TaskCommand command=row.original();
+            Task task=command.task();
+            String userId=task.getActorUserId(), authMode=task.getAuthMode(), projectId=task.getProjectId();
+            if(row.activeAuthorizationId()!=null) {
+                List<GrantActor> grant=jdbc.query("SELECT project_id,actor_user_id,auth_mode FROM resolution_authorizations WHERE id=? AND resolution_id=?",
+                        (rs,n)->new GrantActor(rs.getString(1),rs.getString(2),rs.getString(3)),row.activeAuthorizationId(),row.id());
+                if(grant.isEmpty()) return "AUTHORIZATION_REVOKED";
+                GrantActor g=grant.get(0); projectId=g.projectId(); userId=g.actorUserId(); authMode=g.authMode();
+            }
+            if(projectId==null||userId==null||authMode==null)return "AUTHORIZATION_CONTEXT_MISSING";
+            authorization.requireForUpdate(userId,AuthMode.valueOf(authMode),projectId,ProjectPermission.TASK_REVIEW);
+            return null;
+        } catch(IdentityAuthorizationException|IllegalArgumentException denied) { return "AUTHORIZATION_REVOKED"; }
+    }
+    private record GrantActor(String projectId,String actorUserId,String authMode) { }
     private void change(Row row,String state,String code,String actor,int attempts,int cycle,JsonNode receipt,Instant time) {
         if(!resolutions.transition(row,state,code,actor,attempts,cycle,receipt,time))throw new IllegalStateException("resolution CAS failed while locked");
     }

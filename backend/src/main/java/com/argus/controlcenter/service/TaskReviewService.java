@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Instant;
 import java.util.*;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.argus.controlcenter.identity.*;
 
 @Service
 public class TaskReviewService {
@@ -16,21 +18,49 @@ public class TaskReviewService {
                                String reason,boolean blocksInstance,String resolutionId) { }
     private final TaskReviewStore store;private final TaskResolutionRepository repository;private final TaskReviewPolicy policy;
     private final TaskReviewGateway gateway;private final ObjectMapper json;
+    private final CurrentActorProvider actorProvider;
+    private final ProjectAuthorization authorization;
     public TaskReviewService(TaskReviewStore store,TaskResolutionRepository repository,TaskReviewPolicy policy,TaskReviewGateway gateway,ObjectMapper json) {
+        this(store,repository,policy,gateway,json,null,null);
+    }
+    @Autowired
+    public TaskReviewService(TaskReviewStore store,TaskResolutionRepository repository,TaskReviewPolicy policy,TaskReviewGateway gateway,ObjectMapper json,
+                             CurrentActorProvider actorProvider,ProjectAuthorization authorization) {
         this.store=store;this.repository=repository;this.policy=policy;this.gateway=gateway;
+        this.actorProvider=actorProvider;this.authorization=authorization;
         this.json=json.copy().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION).enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
     }
     public TaskResolution submit(String taskId,String key,String raw,boolean operator) {
+        return submit(taskId,key,raw,operator,null,actorProvider==null?new CurrentActor(IdentityConstants.LEGACY_USER_ID,AuthMode.LEGACY_TOKEN,PlatformRole.SYSTEM_LEGACY,true):actorProvider.current());
+    }
+    public TaskResolution submit(String taskId,String key,String raw,boolean operator,String projectId,CurrentActor actor) {
         if(raw==null||raw.length()>32768)throw new IllegalArgumentException("INVALID_REVIEW_REQUEST");
         ReviewRequest request;
         try{request=ReviewRequest.parse(json.readTree(raw));}
         catch(java.io.IOException error){throw new IllegalArgumentException("INVALID_REVIEW_REQUEST");}
-        return store.submit(taskId,key,request,operator);
+        return store.submit(taskId,key,request,operator,projectId,actor);
     }
     public TaskResolution find(String id){return repository.view(repository.find(id).orElseThrow(()->new NotFoundException("resolution not found")));}
+    public TaskResolution findScoped(String id,String projectId,CurrentActor actor){
+        authorization.require(actor,projectId,ProjectPermission.RESOURCE_READ); TaskResolution value=find(id);
+        if(!projectId.equals(value.projectId()))throw new NotFoundException("resolution not found"); return value;
+    }
     public TaskResolution byTask(String id){store.task(id);return repository.byTask(id).map(repository::view).orElse(null);}
+    public TaskResolution byTaskScoped(String id,String projectId,CurrentActor actor){
+        authorization.require(actor,projectId,ProjectPermission.RESOURCE_READ); TaskResolution value=byTask(id);
+        if(value!=null&&!projectId.equals(value.projectId())) throw new NotFoundException("resolution not found"); return value;
+    }
+    public TaskResolution byRequestKeyScoped(String key,String projectId,CurrentActor actor) {
+        if (authorization.isIdentityMode()) authorization.require(actor,projectId,ProjectPermission.RESOURCE_READ);
+        var row = authorization.isIdentityMode() ? repository.byKey(projectId,actor.userId(),key) : repository.byKey(key);
+        return row.map(repository::view).orElseThrow(()->new NotFoundException("REQUEST_NOT_FOUND"));
+    }
     public List<TaskResolution.Event> events(String id){find(id);return repository.events(id);}
     public Capabilities capabilities(String id,boolean operator) {
+        return capabilities(id,operator,null,actorProvider==null?null:actorProvider.current());
+    }
+    public Capabilities capabilities(String id,boolean operator,String projectId,CurrentActor actor) {
+        if(authorization!=null&&authorization.isIdentityMode()) authorization.require(actor,projectId,ProjectPermission.TASK_REVIEW);
         TaskCommand task=store.task(id);var prior=repository.byTask(id);
         String denial=policy.denial(operator,task.task().getInstanceId());
         if(denial==null)denial=store.eligibility(task,false);
@@ -40,7 +70,9 @@ public class TaskReviewService {
         return new Capabilities(policy.enabled(),create,recheck,create||recheck?List.of(ReviewRequest.DECISION):List.of(),reason,store.ownsInstance(task),prior.map(TaskResolutionRepository.Row::id).orElse(null));
     }
     /** 只读即时证据；未知值保持null，不用缺失布尔值假称执行器已停止。 */
-    public JsonNode evidence(String id) {
+    public JsonNode evidence(String id) { return evidence(id,null,actorProvider==null?null:actorProvider.current()); }
+    public JsonNode evidence(String id,String projectId,CurrentActor actor) {
+        if(authorization!=null&&authorization.isIdentityMode()) authorization.require(actor,projectId,ProjectPermission.TASK_REVIEW);
         TaskCommand original=store.task(id);Task t=original.task();ObjectNode out=json.createObjectNode();
         out.put("taskId",t.getId());out.put("commandId",t.getCommandId());out.put("instanceId",t.getInstanceId());out.put("nodeId",t.getNodeId());out.put("agentInstanceId",t.getAgentInstanceId());out.put("checkedAt",Instant.now().toString());
         for(String key:List.of("bindingMatches","agentTask","workerActive","knownProcessesActive","lockDisposition","processAssessment"))out.putNull(key);

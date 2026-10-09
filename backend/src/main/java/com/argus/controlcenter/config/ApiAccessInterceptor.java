@@ -18,9 +18,15 @@ import java.security.MessageDigest;
 public class ApiAccessInterceptor implements HandlerInterceptor {
     public static final String OPERATOR_ATTRIBUTE = ApiAccessInterceptor.class.getName() + ".operator";
     private final SecurityProperties properties;
+    private final com.argus.controlcenter.identity.IdentityModeProperties identityMode;
 
     public ApiAccessInterceptor(SecurityProperties properties) {
+        this(properties, null);
+    }
+
+    public ApiAccessInterceptor(SecurityProperties properties, com.argus.controlcenter.identity.IdentityModeProperties identityMode) {
         this.properties = properties;
+        this.identityMode = identityMode;
         if (properties.isApiAuthRequired() && properties.getApiAccessToken().isBlank()) {
             throw new IllegalStateException("ARGUS_API_ACCESS_TOKEN is required when ARGUS_API_AUTH_REQUIRED=true");
         }
@@ -29,6 +35,8 @@ public class ApiAccessInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws IOException {
+        // OIDC/JWT 链已经完成认证；旧共享令牌绝不能在该模式形成第二个拒绝或降级入口。
+        if (identityMode != null && identityMode.getMode() == com.argus.controlcenter.identity.IdentityModeProperties.Mode.OIDC_IDENTITY) return true;
         if (!properties.isApiAuthRequired() || isHealthPath(request) || "OPTIONS".equals(request.getMethod())) return true;
 
         String header = request.getHeader("Authorization");

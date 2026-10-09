@@ -8,6 +8,9 @@ import * as vue from 'vue'
 import { loadTs } from './load-ts.mjs'
 
 const review = await loadTs('task-resolution'), models = await loadTs('models'), control = await loadTs('task-control')
+const authSession = await loadTs('auth-session'), scopedRecovery = await loadTs('scoped-recovery')
+// 组件行为测试沿用旧令牌模式；真实 OIDC 会在 App bootstrap 后切换到按项目隔离存储。
+authSession.authSession.configure({ mode: 'LEGACY_TOKEN', loginPath: null, csrfRequired: false, readOnly: false })
 const time = '2026-10-09T02:00:00Z'
 const body = { decision: 'ACKNOWLEDGE_UNCERTAINTY', reason: '核对原因', evidence: '日志及观察依据', acknowledgeNoReplay: true, acknowledgeResidualRisk: true }
 const task = models.normalizeTask({ id: 'old-task', instanceId: 'central-a', nodeId: 'node-a', agentInstanceId: 'same', commandId: 'old-command', action: 'RESTART', status: 'UNKNOWN', executionMode: 'MOCK', blocksInstance: true })
@@ -112,7 +115,7 @@ function component(apiOverrides = {}, storage = store(), props = { taskId: task.
   let mount, unmount, interval; const emitted = []
   const api = { task: async () => task, taskResolution: async () => null, reviewCapabilities: async () => review.normalizeReviewCapabilities(capabilities),
     reviewEvidence: async () => evidence, resolutionEvents: async () => [], resolveTask: async () => resolution(), ...apiOverrides }
-  const modules = { vue: { ...vue, onMounted(f) { mount = f }, onUnmounted(f) { unmount = f } }, '../api': { api }, '../models': models, '../task-control': control, '../task-resolution': review }
+  const modules = { vue: { ...vue, onMounted(f) { mount = f }, onUnmounted(f) { unmount = f } }, '../api': { api }, '../models': models, '../task-control': control, '../task-resolution': review, '../auth-session': authSession, '../scoped-recovery': scopedRecovery }
   const exports = {}
   vm.runInNewContext(code, { exports, require: name => modules[name], window: { sessionStorage: storage, setInterval(f) { interval = f; return 1 }, clearInterval() { interval = undefined } }, AbortController, console })
   const app = exports.default.setup(props, { expose() {}, emit: (...args) => emitted.push(args) })

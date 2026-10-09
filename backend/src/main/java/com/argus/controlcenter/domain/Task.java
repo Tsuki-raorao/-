@@ -23,6 +23,12 @@ public class Task {
     private String commandId;
     private String executionMode = "LEGACY_MOCK";
     private String requestedBy = "legacy";
+    /** 所属项目；身份模式下所有读取和写入均以此字段做资源边界。 */
+    private String projectId;
+    /** 发起任务的数据库主体；历史任务为空或 SYSTEM_LEGACY，不回填真实用户。 */
+    private String actorUserId;
+    /** 接收任务时使用的身份通道。 */
+    private String authMode = "LEGACY_TOKEN";
     private Instant updatedAt;
     private int attempts;
     private String resultCode;
@@ -57,6 +63,12 @@ public class Task {
     public void setExecutionMode(String value) { executionMode = value; }
     public String getRequestedBy() { return requestedBy; }
     public void setRequestedBy(String value) { requestedBy = value; }
+    public String getProjectId() { return projectId; }
+    public void setProjectId(String value) { projectId = value; }
+    public String getActorUserId() { return actorUserId; }
+    public void setActorUserId(String value) { actorUserId = value; }
+    public String getAuthMode() { return authMode; }
+    public void setAuthMode(String value) { authMode = value; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant value) { updatedAt = value; }
     public int getAttempts() { return attempts; }
