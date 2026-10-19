@@ -99,7 +99,6 @@ public class TaskRepository {
     public long count() { return jdbc.queryForObject("SELECT COUNT(*) FROM tasks",Long.class); }
     public boolean hasNodeHistory(String nodeId) { return jdbc.queryForObject("SELECT COUNT(*) FROM tasks t JOIN instances i ON i.id=t.instance_id WHERE i.node_id=?",Long.class,nodeId)>0; }
     private boolean hasColumn(String column) {
-        try { return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)='tasks' AND LOWER(COLUMN_NAME)=LOWER(?)",Integer.class,column)>0; }
-        catch (RuntimeException ignored) { return false; }
+        return SchemaColumns.has(jdbc,"tasks",column);
     }
 }

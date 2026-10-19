@@ -1,6 +1,11 @@
 server:
   port: 8080
 spring:
+  rabbitmq:
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
   task:
     scheduling:
       # 单个任务 worker 有界顺序执行，独立余量避免慢控制请求阻塞原有采集。

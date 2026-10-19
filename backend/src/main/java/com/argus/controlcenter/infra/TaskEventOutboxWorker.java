@@ -18,15 +18,17 @@ public class TaskEventOutboxWorker {
 
     @Scheduled(fixedDelayString = "${ARGUS_MQ_OUTBOX_POLL_MS:1000}")
     public void publishDue() {
-        Instant now = Instant.now();
-        for (TaskEventOutboxRepository.Event event : outbox.claim(20, now, now.plusSeconds(30))) {
+        for (int count=0; count<20; count++) {
+            Instant now = Instant.now();
+            var claimed = outbox.claim(1, now, now.plusSeconds(30));
+            if (claimed.isEmpty()) break;
+            TaskEventOutboxRepository.Event event = claimed.get(0);
             try {
                 publisher.publish(event.taskId(), event.sequence(), event.from(), event.to(), event.actor(), event.reason(), event.occurredAt());
-                outbox.markPublished(event.id(), Instant.now());
+                outbox.markPublished(event, Instant.now());
             } catch (RuntimeException failure) {
-                int attempts = event.attempts() + 1;
-                long delay = Math.min(300, 1L << Math.min(attempts, 8));
-                outbox.markRetry(event.id(), attempts, Instant.now().plus(Duration.ofSeconds(delay)), failure.toString());
+                long delay = Math.min(300, 1L << Math.min(event.attempts(), 9));
+                outbox.markRetry(event, Instant.now().plus(Duration.ofSeconds(delay)), failure.getClass().getSimpleName());
             }
         }
     }

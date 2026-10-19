@@ -24,26 +24,27 @@ public class TaskEventOutboxRepository {
     }
 
     public List<Event> claim(int limit, Instant now, Instant leaseUntil) {
-        var selected = jdbc.query("SELECT id,task_id,event_sequence,from_status,to_status,actor,reason,occurred_at,attempts FROM task_event_outbox WHERE (status='PENDING' OR status='RETRY') AND next_attempt_at<=? AND (lease_until IS NULL OR lease_until<=?) ORDER BY next_attempt_at,id LIMIT " + Math.max(1, Math.min(limit, 100)),
+        var selected = jdbc.query("SELECT id,task_id,event_sequence,from_status,to_status,actor,reason,occurred_at,attempts FROM task_event_outbox WHERE status IN ('PENDING','RETRY','PROCESSING') AND next_attempt_at<=? AND (lease_until IS NULL OR lease_until<=?) ORDER BY next_attempt_at,id LIMIT " + Math.max(1, Math.min(limit, 100)),
                 (rs, row) -> new Event(rs.getString("id"), rs.getString("task_id"), rs.getLong("event_sequence"),
                         rs.getString("from_status") == null ? null : TaskStatus.valueOf(rs.getString("from_status")),
                         TaskStatus.valueOf(rs.getString("to_status")), rs.getString("actor"), rs.getString("reason"),
                         rs.getTimestamp("occurred_at").toInstant(), rs.getInt("attempts")), Timestamp.from(now), Timestamp.from(now));
         var claimed = new java.util.ArrayList<Event>();
         for (Event event : selected) {
-            if (jdbc.update("UPDATE task_event_outbox SET status='PROCESSING',lease_until=? WHERE id=? AND (status='PENDING' OR status='RETRY') AND (lease_until IS NULL OR lease_until<=?)",
-                    Timestamp.from(leaseUntil), event.id(), Timestamp.from(now)) == 1) claimed.add(event);
+            if (jdbc.update("UPDATE task_event_outbox SET status='PROCESSING',lease_until=?,attempts=attempts+1 WHERE id=? AND attempts=? AND status IN ('PENDING','RETRY','PROCESSING') AND next_attempt_at<=? AND (lease_until IS NULL OR lease_until<=?)",
+                    Timestamp.from(leaseUntil), event.id(), event.attempts(), Timestamp.from(now), Timestamp.from(now)) == 1)
+                claimed.add(new Event(event.id(),event.taskId(),event.sequence(),event.from(),event.to(),event.actor(),event.reason(),event.occurredAt(),event.attempts()+1));
         }
         return claimed;
     }
 
-    public void markPublished(String id, Instant at) {
-        jdbc.update("UPDATE task_event_outbox SET status='PUBLISHED',published_at=?,lease_until=NULL,last_error=NULL WHERE id=? AND status='PROCESSING'",
-                Timestamp.from(at), id);
+    public void markPublished(Event event, Instant at) {
+        jdbc.update("UPDATE task_event_outbox SET status='PUBLISHED',published_at=?,lease_until=NULL,last_error=NULL WHERE id=? AND attempts=? AND status='PROCESSING' AND lease_until>?",
+                Timestamp.from(at), event.id(), event.attempts(), Timestamp.from(at));
     }
 
-    public void markRetry(String id, int attempts, Instant next, String error) {
-        jdbc.update("UPDATE task_event_outbox SET status='RETRY',attempts=?,next_attempt_at=?,lease_until=NULL,last_error=? WHERE id=? AND status='PROCESSING'",
-                attempts, Timestamp.from(next), error == null ? null : error.substring(0, Math.min(512, error.length())), id);
+    public void markRetry(Event event, Instant next, String error) {
+        jdbc.update("UPDATE task_event_outbox SET status='RETRY',next_attempt_at=?,lease_until=NULL,last_error=? WHERE id=? AND attempts=? AND status='PROCESSING'",
+                Timestamp.from(next), error == null ? null : error.substring(0, Math.min(512, error.length())), event.id(), event.attempts());
     }
 }
