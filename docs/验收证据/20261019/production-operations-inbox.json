@@ -1,0 +1,9 @@
+{
+  "scope": "PRODUCTION_OPERATION_INBOX",
+  "passed": true,
+  "expectedCommands": 3,
+  "matchingUniqueInboxRecords": 3,
+  "allSucceeded": true,
+  "fixtureStopped": true,
+  "gameActionsSubmitted": false
+}

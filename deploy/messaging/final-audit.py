@@ -13,9 +13,10 @@ import importlib.util
 spec=importlib.util.spec_from_file_location('release_stage','/tmp/release-stage.py');release=importlib.util.module_from_spec(spec);spec.loader.exec_module(release)
 state=release.load();env=release.live_env()
 if state['stage']!='PUBLISHED':raise SystemExit('release publication incomplete')
-if len(sys.argv)!=2 or not re.fullmatch(r'[A-Za-z0-9.-]+',sys.argv[1]):raise SystemExit('provide the Argus HTTP virtual-host name/IP, not the default loopback host')
+operations=len(sys.argv)==3 and sys.argv[2]=='--operations'
+if len(sys.argv) not in (2,3) or (len(sys.argv)==3 and not operations) or not re.fullmatch(r'[A-Za-z0-9.-]+',sys.argv[1]):raise SystemExit('provide the Argus HTTP virtual-host name/IP, not the default loopback host')
 http_host=sys.argv[1]
-report={'scope':'PRODUCTION_FIRST_FOUR_FINAL_AUDIT','passed':False,'checks':[]}
+report={'scope':'PRODUCTION_OPERATIONS_FINAL_AUDIT' if operations else 'PRODUCTION_FIRST_FOUR_FINAL_AUDIT','passed':False,'checks':[]}
 def check(value,name):
     report['checks'].append({'name':name,'passed':bool(value)})
     if not value:raise RuntimeError(name)
@@ -26,7 +27,15 @@ try:
     live=Path(args[args.index('-jar')+1]).resolve()
     check(live==release.ROOT/'argus-control-center.jar' and release.digest(live)==state['artifactSha256'],'running artifact matches verified candidate')
     check(env.get('ARGUS_MQ_ENABLED')=='true' and env.get('ARGUS_MONITORING_ENABLED')=='true','MQ and monitoring enabled in running process')
-    check(env.get('ARGUS_API_READ_ONLY')=='true' and env.get('ARGUS_TASK_CONTROL_ENABLED','false')!='true' and env.get('ARGUS_TASK_REVIEW_ENABLED','false')!='true','production real operations remain disabled')
+    if operations:
+        check(env.get('ARGUS_API_READ_ONLY')=='false' and env.get('ARGUS_TASK_CONTROL_ENABLED')=='true' and env.get('ARGUS_TASK_REVIEW_ENABLED')=='true' and bool(env.get('ARGUS_API_CONTROL_TOKEN')) and env['ARGUS_API_CONTROL_TOKEN']!=env['ARGUS_API_ACCESS_TOKEN'],'authenticated operations and independent operator enabled')
+        caps=release.get('control/capabilities',env)
+        check(caps['controlEnabled'] and caps['canControl'] and len([t for t in caps['targets'] if t['allowedActions']])==9,'nine explicit business/test targets enabled')
+        reader=dict(env);reader.pop('ARGUS_API_CONTROL_TOKEN',None)
+        rcaps=release.get('control/capabilities',reader)
+        check(not rcaps['canControl'] and all(not t['allowedActions'] for t in rcaps['targets']),'existing reader has no operation capability')
+    else:
+        check(env.get('ARGUS_API_READ_ONLY')=='true' and env.get('ARGUS_TASK_CONTROL_ENABLED','false')!='true' and env.get('ARGUS_TASK_REVIEW_ENABLED','false')!='true','production real operations remain disabled')
     old=release.auth_env()
     check(all(env.get(key)==old.get(key) for key in ('ARGUS_AI_ENABLED','ARGUS_REDIS_ENABLED')),'existing AI and Redis toggles preserved')
     with release.MySQL(env) as db:
@@ -46,7 +55,10 @@ try:
         age=(now-checked).total_seconds()
         check(node['status']=='ONLINE' and node['syncStatus']=='OK' and -5<=age<180,'real node snapshot fresh '+node['id'])
         health=release.get('agent-gateway/nodes/'+node['id']+'/health')
-        check(health.get('controlEnabled') is False and health.get('readOnly') is True,'Agent remains read-only '+node['id'])
+        if operations:
+            check(health.get('controlEnabled') is True and health.get('reviewEnabled') is True,'Agent control and review enabled '+node['id'])
+        else:
+            check(health.get('controlEnabled') is False and health.get('readOnly') is True,'Agent remains read-only '+node['id'])
         facts.append({'nodeId':node['id'],'status':node['status'],'source':node['dataSource'],'snapshotAgeSeconds':round(age,3),'memoryPercent':node['memoryBytes']*100/node['memoryTotalBytes']})
     report['inventory']={'realHostNodes':facts,'legacyMockNodes':len(mock),'instances':len(instances)}
     summary=release.get('monitoring/summary');rules={a['rule_key'] for a in summary['alerts']}

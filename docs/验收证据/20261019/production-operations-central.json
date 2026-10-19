@@ -1,0 +1,47 @@
+{
+  "scope": "PRODUCTION_OPERATIONS_CENTRAL",
+  "passed": true,
+  "controlEnabled": true,
+  "reviewEnabled": true,
+  "readOnly": false,
+  "allowedTargets": [
+    {
+      "id": "90a8c93d-31e3-4cff-8904-57d7e8acebc8",
+      "name": "mc03"
+    },
+    {
+      "id": "5140c16e-d19e-4191-8713-74fde7b235d0",
+      "name": "mc02"
+    },
+    {
+      "id": "f700681e-0e79-4cca-8983-47de1f953fbb",
+      "name": "mc01"
+    },
+    {
+      "id": "5b51bafe-bfeb-4e71-9bee-42612c90b68a",
+      "name": "fight202609"
+    },
+    {
+      "id": "ce9b28ee-54c0-4eef-abf1-58c1dcc6be4b",
+      "name": "argus-acceptance-fixture"
+    },
+    {
+      "id": "open-terminal",
+      "name": "open-terminal"
+    },
+    {
+      "id": "code-server",
+      "name": "code-server"
+    },
+    {
+      "id": "open-webui-old-v0.10.2",
+      "name": "open-webui-old-v0.10.2"
+    },
+    {
+      "id": "open-webui",
+      "name": "open-webui"
+    }
+  ],
+  "existingReadTokenPreserved": true,
+  "MQMonitoringRedisAiTogglesPreserved": true
+}

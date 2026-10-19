@@ -1,0 +1,102 @@
+{
+  "scope": "PRODUCTION_OPERATIONS_BROWSER",
+  "passed": true,
+  "checks": [
+    {
+      "name": "public backend has operations enabled",
+      "passed": true
+    },
+    {
+      "name": "operator capabilities enabled",
+      "passed": true
+    },
+    {
+      "name": "nine explicit business/test targets enabled",
+      "passed": true
+    },
+    {
+      "name": "original reader remains read-only",
+      "passed": true
+    },
+    {
+      "name": "reader cannot execute even though global operations enabled",
+      "passed": true
+    },
+    {
+      "name": "production Broker excluded and server rejects action",
+      "passed": true
+    },
+    {
+      "name": "confirmation identifies exact test target START",
+      "passed": true
+    },
+    {
+      "name": "durable 202 acceptance START",
+      "passed": true
+    },
+    {
+      "name": "persisted successful timeline START",
+      "passed": true
+    },
+    {
+      "name": "confirmation identifies exact test target RESTART",
+      "passed": true
+    },
+    {
+      "name": "durable 202 acceptance RESTART",
+      "passed": true
+    },
+    {
+      "name": "persisted successful timeline RESTART",
+      "passed": true
+    },
+    {
+      "name": "confirmation identifies exact test target STOP",
+      "passed": true
+    },
+    {
+      "name": "durable 202 acceptance STOP",
+      "passed": true
+    },
+    {
+      "name": "persisted successful timeline STOP",
+      "passed": true
+    },
+    {
+      "name": "all three production tasks retained",
+      "passed": true
+    },
+    {
+      "name": "capabilities remain enabled after reload",
+      "passed": true
+    },
+    {
+      "name": "no browser runtime errors",
+      "passed": true
+    }
+  ],
+  "actions": [
+    {
+      "id": "ad466c55-e59a-4260-8e43-10a878196632",
+      "commandId": "e805cb7f-682a-4988-ad37-66c8a06340db",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "eventCount": 4
+    },
+    {
+      "id": "4ba19918-2810-4426-8a4e-6854cd6d25fc",
+      "commandId": "9c380613-fe2d-433e-8500-66212494c3d3",
+      "action": "RESTART",
+      "status": "SUCCEEDED",
+      "eventCount": 5
+    },
+    {
+      "id": "a08baac0-77c2-47ce-be51-4f7e8e87532f",
+      "commandId": "dde36136-bf31-49ff-a2b7-5ea1fedd3a60",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "eventCount": 5
+    }
+  ],
+  "pageErrors": []
+}
