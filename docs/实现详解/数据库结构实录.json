@@ -1,0 +1,2803 @@
+{
+  "scope": "isolated test schema; metadata only",
+  "migrations": [
+    {
+      "version": "1",
+      "description": "create argus tables",
+      "success": "1"
+    },
+    {
+      "version": "2",
+      "description": "add instance runtime metrics",
+      "success": "1"
+    },
+    {
+      "version": "3",
+      "description": "add node runtime metrics",
+      "success": "1"
+    },
+    {
+      "version": "4",
+      "description": "isolate instance identity and sampling",
+      "success": "1"
+    },
+    {
+      "version": "5",
+      "description": "durable task queue",
+      "success": "1"
+    },
+    {
+      "version": "6",
+      "description": "task manual resolutions",
+      "success": "1"
+    },
+    {
+      "version": "7",
+      "description": "identity projects",
+      "success": "1"
+    },
+    {
+      "version": "8",
+      "description": "task event outbox",
+      "success": "1"
+    },
+    {
+      "version": "9",
+      "description": "ai diagnosis records",
+      "success": "1"
+    },
+    {
+      "version": "10",
+      "description": "task event receipts",
+      "success": "1"
+    }
+  ],
+  "columns": [
+    {
+      "TABLE_NAME": "ai_diagnoses",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "ai_diagnoses",
+      "COLUMN_NAME": "question",
+      "COLUMN_TYPE": "varchar(4000)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "ai_diagnoses",
+      "COLUMN_NAME": "model",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "ai_diagnoses",
+      "COLUMN_NAME": "answer",
+      "COLUMN_TYPE": "text",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "ai_diagnoses",
+      "COLUMN_NAME": "evidence_json",
+      "COLUMN_TYPE": "text",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "ai_diagnoses",
+      "COLUMN_NAME": "created_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "COLUMN_NAME": "installed_rank",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "COLUMN_NAME": "version",
+      "COLUMN_TYPE": "varchar(50)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "COLUMN_NAME": "description",
+      "COLUMN_TYPE": "varchar(200)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "COLUMN_NAME": "type",
+      "COLUMN_TYPE": "varchar(20)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "COLUMN_NAME": "script",
+      "COLUMN_TYPE": "varchar(1000)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "COLUMN_NAME": "checksum",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "COLUMN_NAME": "installed_by",
+      "COLUMN_TYPE": "varchar(100)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "COLUMN_NAME": "installed_on",
+      "COLUMN_TYPE": "timestamp",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+      "COLUMN_KEY": null,
+      "EXTRA": "DEFAULT_GENERATED"
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "COLUMN_NAME": "execution_time",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "COLUMN_NAME": "success",
+      "COLUMN_TYPE": "tinyint(1)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "identity_config_gate",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "identity_config_gate",
+      "COLUMN_NAME": "mode",
+      "COLUMN_TYPE": "varchar(24)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "identity_config_gate",
+      "COLUMN_NAME": "oidc_activated",
+      "COLUMN_TYPE": "tinyint(1)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "identity_config_gate",
+      "COLUMN_NAME": "bootstrap_issuer",
+      "COLUMN_TYPE": "varchar(512)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "identity_config_gate",
+      "COLUMN_NAME": "bootstrap_subject",
+      "COLUMN_TYPE": "varchar(512)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "identity_config_gate",
+      "COLUMN_NAME": "bootstrap_user_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "identity_config_gate",
+      "COLUMN_NAME": "updated_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instance_task_locks",
+      "COLUMN_NAME": "instance_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instance_task_locks",
+      "COLUMN_NAME": "task_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "UNI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "name",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "node_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "container_name",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "version",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "updated_at",
+      "COLUMN_TYPE": "timestamp",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "cpu_percent",
+      "COLUMN_TYPE": "decimal(10,2)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "memory_bytes",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "player_count",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "agent_instance_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "last_seen_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "data_source",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "LEGACY",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "sampled_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "metrics_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "UNKNOWN",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "logs",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "logs",
+      "COLUMN_NAME": "instance_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "logs",
+      "COLUMN_NAME": "log_timestamp",
+      "COLUMN_TYPE": "timestamp",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "logs",
+      "COLUMN_NAME": "level",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "logs",
+      "COLUMN_NAME": "message",
+      "COLUMN_TYPE": "varchar(4000)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "logs",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "name",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "address",
+      "COLUMN_TYPE": "varchar(255)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "last_heartbeat",
+      "COLUMN_TYPE": "timestamp",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "cpu_percent",
+      "COLUMN_TYPE": "decimal(10,2)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "memory_bytes",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "memory_total_bytes",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "last_checked_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "last_successful_sync_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "sync_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "UNKNOWN",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "sync_error_code",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "data_source",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "LEGACY",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "sampled_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "metrics_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "UNKNOWN",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "COLUMN_NAME": "user_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "COLUMN_NAME": "role",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "COLUMN_NAME": "version_no",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "COLUMN_NAME": "created_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "COLUMN_NAME": "updated_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "name",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "permission_version",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "created_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "projects",
+      "COLUMN_NAME": "updated_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "resolution_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "actor_user_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "auth_mode",
+      "COLUMN_TYPE": "varchar(24)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "request_key",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "request_hash",
+      "COLUMN_TYPE": "char(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "reason",
+      "COLUMN_TYPE": "varchar(1000)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "acknowledge_no_replay",
+      "COLUMN_TYPE": "tinyint(1)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "acknowledge_residual_risk",
+      "COLUMN_TYPE": "tinyint(1)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "kind",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "created_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "resolution_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "authorization_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "actor_user_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "auth_mode",
+      "COLUMN_TYPE": "varchar(24)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "permission_version",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "attempt_no",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "lease_owner",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "issued_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "task_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "actor_user_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "auth_mode",
+      "COLUMN_TYPE": "varchar(24)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "permission_version",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "attempt_no",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "lease_owner",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "issued_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "task_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "event_sequence",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "from_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "to_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "actor",
+      "COLUMN_TYPE": "varchar(32)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "reason",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "occurred_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "attempts",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "next_attempt_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "lease_until",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "last_error",
+      "COLUMN_TYPE": "varchar(512)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "published_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "created_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_receipts",
+      "COLUMN_NAME": "event_id",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_receipts",
+      "COLUMN_NAME": "task_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_receipts",
+      "COLUMN_NAME": "event_sequence",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_receipts",
+      "COLUMN_NAME": "event_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_receipts",
+      "COLUMN_NAME": "observed_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_event_receipts",
+      "COLUMN_NAME": "consumed_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "task_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "event_sequence",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "from_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "to_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "actor",
+      "COLUMN_TYPE": "varchar(32)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "reason",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "occurred_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "actor_user_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_queue",
+      "COLUMN_NAME": "task_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_queue",
+      "COLUMN_NAME": "next_run_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_queue",
+      "COLUMN_NAME": "lease_until",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_queue",
+      "COLUMN_NAME": "lease_owner",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "resolution_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "event_sequence",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "from_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "to_status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "actor",
+      "COLUMN_TYPE": "varchar(32)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "reason",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "occurred_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "actor_user_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_queue",
+      "COLUMN_NAME": "resolution_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_queue",
+      "COLUMN_NAME": "next_run_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_queue",
+      "COLUMN_NAME": "lease_until",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolution_queue",
+      "COLUMN_NAME": "lease_owner",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "task_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "UNI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "request_key",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "binding_json",
+      "COLUMN_TYPE": "text",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "intent_json",
+      "COLUMN_TYPE": "text",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "request_hash",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "result_code",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "attempts",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "cycle_attempts",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "version_no",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "requested_by",
+      "COLUMN_TYPE": "varchar(32)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "created_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "updated_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "applied_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "receipt_json",
+      "COLUMN_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "receipt_hash",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "actor_user_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "auth_mode",
+      "COLUMN_TYPE": "varchar(24)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "active_authorization_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "instance_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "action",
+      "COLUMN_TYPE": "varchar(32)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "message",
+      "COLUMN_TYPE": "varchar(512)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "created_at",
+      "COLUMN_TYPE": "timestamp",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "finished_at",
+      "COLUMN_TYPE": "timestamp",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "node_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "agent_instance_id",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "command_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "UNI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "idempotency_key",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "execution_mode",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "LEGACY_MOCK",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "requested_by",
+      "COLUMN_TYPE": "varchar(32)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "legacy",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "updated_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "attempts",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "result_code",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "target_address",
+      "COLUMN_TYPE": "varchar(512)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "agent_node_id",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "store_id",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "expires_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "version_no",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "agent_accepted",
+      "COLUMN_TYPE": "tinyint(1)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "actor_user_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "auth_mode",
+      "COLUMN_TYPE": "varchar(24)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "issuer",
+      "COLUMN_TYPE": "varchar(512)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "subject",
+      "COLUMN_TYPE": "varchar(512)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "display_name",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "status",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "platform_role",
+      "COLUMN_TYPE": "varchar(32)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "version_no",
+      "COLUMN_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "created_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "updated_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "identity_hash",
+      "COLUMN_TYPE": "binary(32)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "UNI",
+      "EXTRA": "STORED GENERATED"
+    }
+  ],
+  "indexes": [
+    {
+      "TABLE_NAME": "ai_diagnoses",
+      "INDEX_NAME": "idx_ai_diagnoses_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "TABLE_NAME": "ai_diagnoses",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "INDEX_NAME": "flyway_schema_history_s_idx",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "success"
+    },
+    {
+      "TABLE_NAME": "flyway_schema_history",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "installed_rank"
+    },
+    {
+      "TABLE_NAME": "identity_config_gate",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "instance_task_locks",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "instance_id"
+    },
+    {
+      "TABLE_NAME": "instance_task_locks",
+      "INDEX_NAME": "task_id",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "task_id"
+    },
+    {
+      "TABLE_NAME": "instances",
+      "INDEX_NAME": "idx_instance_project",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "instances",
+      "INDEX_NAME": "idx_instances_node_id",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "node_id"
+    },
+    {
+      "TABLE_NAME": "instances",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "instances",
+      "INDEX_NAME": "uq_instances_node_agent",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "node_id"
+    },
+    {
+      "TABLE_NAME": "instances",
+      "INDEX_NAME": "uq_instances_node_agent",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "agent_instance_id"
+    },
+    {
+      "TABLE_NAME": "logs",
+      "INDEX_NAME": "idx_log_project",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "logs",
+      "INDEX_NAME": "idx_logs_instance_timestamp",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "instance_id"
+    },
+    {
+      "TABLE_NAME": "logs",
+      "INDEX_NAME": "idx_logs_instance_timestamp",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "log_timestamp"
+    },
+    {
+      "TABLE_NAME": "logs",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "INDEX_NAME": "idx_node_project",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "INDEX_NAME": "fk_member_user",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "user_id"
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "user_id"
+    },
+    {
+      "TABLE_NAME": "projects",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "INDEX_NAME": "fk_auth_actor",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "actor_user_id"
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "INDEX_NAME": "fk_auth_resolution",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "resolution_id"
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "INDEX_NAME": "uq_auth_project_actor_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "INDEX_NAME": "uq_auth_project_actor_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "actor_user_id"
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "INDEX_NAME": "uq_auth_project_actor_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "request_key"
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "INDEX_NAME": "fk_review_permit_actor",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "actor_user_id"
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "INDEX_NAME": "fk_review_permit_authorization",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "authorization_id"
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "INDEX_NAME": "fk_review_permit_project",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "INDEX_NAME": "uq_review_permit_attempt",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "resolution_id"
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "INDEX_NAME": "uq_review_permit_attempt",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "attempt_no"
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "INDEX_NAME": "fk_permit_actor",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "actor_user_id"
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "INDEX_NAME": "fk_permit_project",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "INDEX_NAME": "uq_permit_attempt",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "task_id"
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "INDEX_NAME": "uq_permit_attempt",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "attempt_no"
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "INDEX_NAME": "idx_outbox_due",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "INDEX_NAME": "idx_outbox_due",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "next_attempt_at"
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "INDEX_NAME": "idx_outbox_due",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "lease_until"
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "INDEX_NAME": "uq_outbox_task_sequence",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "task_id"
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "INDEX_NAME": "uq_outbox_task_sequence",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "event_sequence"
+    },
+    {
+      "TABLE_NAME": "task_event_receipts",
+      "INDEX_NAME": "idx_receipt_consumed",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "consumed_at"
+    },
+    {
+      "TABLE_NAME": "task_event_receipts",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "event_id"
+    },
+    {
+      "TABLE_NAME": "task_event_receipts",
+      "INDEX_NAME": "uq_receipt_task_sequence",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "task_id"
+    },
+    {
+      "TABLE_NAME": "task_event_receipts",
+      "INDEX_NAME": "uq_receipt_task_sequence",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "event_sequence"
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "INDEX_NAME": "fk_task_event_actor",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "actor_user_id"
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "INDEX_NAME": "uq_event_sequence",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "task_id"
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "INDEX_NAME": "uq_event_sequence",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "event_sequence"
+    },
+    {
+      "TABLE_NAME": "task_queue",
+      "INDEX_NAME": "idx_queue_due",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "next_run_at"
+    },
+    {
+      "TABLE_NAME": "task_queue",
+      "INDEX_NAME": "idx_queue_due",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "lease_until"
+    },
+    {
+      "TABLE_NAME": "task_queue",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "task_id"
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "INDEX_NAME": "fk_resolution_event_actor",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "actor_user_id"
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "INDEX_NAME": "uq_review_event_sequence",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "resolution_id"
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "INDEX_NAME": "uq_review_event_sequence",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "event_sequence"
+    },
+    {
+      "TABLE_NAME": "task_resolution_queue",
+      "INDEX_NAME": "idx_review_queue_due",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "next_run_at"
+    },
+    {
+      "TABLE_NAME": "task_resolution_queue",
+      "INDEX_NAME": "idx_review_queue_due",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "lease_until"
+    },
+    {
+      "TABLE_NAME": "task_resolution_queue",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "resolution_id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "INDEX_NAME": "fk_resolution_active_authorization",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "active_authorization_id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "INDEX_NAME": "fk_resolutions_actor",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "actor_user_id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "INDEX_NAME": "idx_resolutions_project_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "INDEX_NAME": "idx_resolutions_project_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "INDEX_NAME": "idx_resolutions_project_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "INDEX_NAME": "task_id",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "task_id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "INDEX_NAME": "uq_resolution_project_actor_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "INDEX_NAME": "uq_resolution_project_actor_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "actor_user_id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "INDEX_NAME": "uq_resolution_project_actor_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "request_key"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "fk_tasks_actor",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "actor_user_id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_task_project",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_instance_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "instance_id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_instance_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_node",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "node_id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_project_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_project_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_project_created",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "uq_tasks_command",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "command_id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "uq_tasks_project_actor_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "uq_tasks_project_actor_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "actor_user_id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "uq_tasks_project_actor_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "idempotency_key"
+    },
+    {
+      "TABLE_NAME": "users",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "users",
+      "INDEX_NAME": "uq_users_issuer_subject_hash",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "identity_hash"
+    }
+  ],
+  "foreignKeys": [
+    {
+      "TABLE_NAME": "instance_task_locks",
+      "COLUMN_NAME": "instance_id",
+      "CONSTRAINT_NAME": "fk_task_lock_instance",
+      "REFERENCED_TABLE_NAME": "instances",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "instance_task_locks",
+      "COLUMN_NAME": "task_id",
+      "CONSTRAINT_NAME": "fk_task_lock_task",
+      "REFERENCED_TABLE_NAME": "tasks",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "project_id",
+      "CONSTRAINT_NAME": "fk_instance_project",
+      "REFERENCED_TABLE_NAME": "projects",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "instances",
+      "COLUMN_NAME": "node_id",
+      "CONSTRAINT_NAME": "fk_instances_node",
+      "REFERENCED_TABLE_NAME": "nodes",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "logs",
+      "COLUMN_NAME": "project_id",
+      "CONSTRAINT_NAME": "fk_log_project",
+      "REFERENCED_TABLE_NAME": "projects",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "logs",
+      "COLUMN_NAME": "instance_id",
+      "CONSTRAINT_NAME": "fk_logs_instance",
+      "REFERENCED_TABLE_NAME": "instances",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "nodes",
+      "COLUMN_NAME": "project_id",
+      "CONSTRAINT_NAME": "fk_node_project",
+      "REFERENCED_TABLE_NAME": "projects",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "COLUMN_NAME": "project_id",
+      "CONSTRAINT_NAME": "fk_member_project",
+      "REFERENCED_TABLE_NAME": "projects",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "project_members",
+      "COLUMN_NAME": "user_id",
+      "CONSTRAINT_NAME": "fk_member_user",
+      "REFERENCED_TABLE_NAME": "users",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "actor_user_id",
+      "CONSTRAINT_NAME": "fk_auth_actor",
+      "REFERENCED_TABLE_NAME": "users",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "project_id",
+      "CONSTRAINT_NAME": "fk_auth_project",
+      "REFERENCED_TABLE_NAME": "projects",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "resolution_authorizations",
+      "COLUMN_NAME": "resolution_id",
+      "CONSTRAINT_NAME": "fk_auth_resolution",
+      "REFERENCED_TABLE_NAME": "task_resolutions",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "actor_user_id",
+      "CONSTRAINT_NAME": "fk_review_permit_actor",
+      "REFERENCED_TABLE_NAME": "users",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "authorization_id",
+      "CONSTRAINT_NAME": "fk_review_permit_authorization",
+      "REFERENCED_TABLE_NAME": "resolution_authorizations",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "project_id",
+      "CONSTRAINT_NAME": "fk_review_permit_project",
+      "REFERENCED_TABLE_NAME": "projects",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "review_dispatch_permits",
+      "COLUMN_NAME": "resolution_id",
+      "CONSTRAINT_NAME": "fk_review_permit_resolution",
+      "REFERENCED_TABLE_NAME": "task_resolutions",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "actor_user_id",
+      "CONSTRAINT_NAME": "fk_permit_actor",
+      "REFERENCED_TABLE_NAME": "users",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "project_id",
+      "CONSTRAINT_NAME": "fk_permit_project",
+      "REFERENCED_TABLE_NAME": "projects",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_dispatch_permits",
+      "COLUMN_NAME": "task_id",
+      "CONSTRAINT_NAME": "fk_permit_task",
+      "REFERENCED_TABLE_NAME": "tasks",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_event_outbox",
+      "COLUMN_NAME": "task_id",
+      "CONSTRAINT_NAME": "fk_outbox_task",
+      "REFERENCED_TABLE_NAME": "tasks",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "task_id",
+      "CONSTRAINT_NAME": "fk_event_task",
+      "REFERENCED_TABLE_NAME": "tasks",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_events",
+      "COLUMN_NAME": "actor_user_id",
+      "CONSTRAINT_NAME": "fk_task_event_actor",
+      "REFERENCED_TABLE_NAME": "users",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_queue",
+      "COLUMN_NAME": "task_id",
+      "CONSTRAINT_NAME": "fk_queue_task",
+      "REFERENCED_TABLE_NAME": "tasks",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "actor_user_id",
+      "CONSTRAINT_NAME": "fk_resolution_event_actor",
+      "REFERENCED_TABLE_NAME": "users",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_resolution_events",
+      "COLUMN_NAME": "resolution_id",
+      "CONSTRAINT_NAME": "fk_review_event_resolution",
+      "REFERENCED_TABLE_NAME": "task_resolutions",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_resolution_queue",
+      "COLUMN_NAME": "resolution_id",
+      "CONSTRAINT_NAME": "fk_review_queue_resolution",
+      "REFERENCED_TABLE_NAME": "task_resolutions",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "active_authorization_id",
+      "CONSTRAINT_NAME": "fk_resolution_active_authorization",
+      "REFERENCED_TABLE_NAME": "resolution_authorizations",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "task_id",
+      "CONSTRAINT_NAME": "fk_resolution_task",
+      "REFERENCED_TABLE_NAME": "tasks",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "actor_user_id",
+      "CONSTRAINT_NAME": "fk_resolutions_actor",
+      "REFERENCED_TABLE_NAME": "users",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "task_resolutions",
+      "COLUMN_NAME": "project_id",
+      "CONSTRAINT_NAME": "fk_resolutions_project",
+      "REFERENCED_TABLE_NAME": "projects",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "project_id",
+      "CONSTRAINT_NAME": "fk_task_project",
+      "REFERENCED_TABLE_NAME": "projects",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "actor_user_id",
+      "CONSTRAINT_NAME": "fk_tasks_actor",
+      "REFERENCED_TABLE_NAME": "users",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "COLUMN_NAME": "instance_id",
+      "CONSTRAINT_NAME": "fk_tasks_instance",
+      "REFERENCED_TABLE_NAME": "instances",
+      "REFERENCED_COLUMN_NAME": "id"
+    }
+  ]
+}
