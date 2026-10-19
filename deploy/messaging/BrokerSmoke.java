@@ -22,6 +22,20 @@ public class BrokerSmoke {
                 if(message==null || !id.equals(message.getProps().getMessageId()) || !id.equals(new String(message.getBody(),StandardCharsets.UTF_8)) || !Integer.valueOf(2).equals(message.getProps().getDeliveryMode()))throw new IllegalStateException("readiness message not recovered");
                 channel.basicAck(message.getEnvelope().getDeliveryTag(),false);channel.queueDelete(queue,false,true);
                 System.out.println("{\"persistentMessageRecovered\":true,\"readinessQueueRemoved\":true,\"businessQueuesTouched\":false}");
+            }else if(args[1].equals("queue-status")){
+                var main=channel.queueDeclarePassive("argus.task-events.consumer.v1");var dead=channel.queueDeclarePassive("argus.task-events.dead");
+                System.out.println("{\"ready\":"+main.getMessageCount()+",\"consumers\":"+main.getConsumerCount()+",\"dead\":"+dead.getMessageCount()+"}");
+            }else if(args[1].equals("poison")){
+                channel.confirmSelect();channel.basicPublish("argus.events","task.event",true,new AMQP.BasicProperties.Builder()
+                    .messageId("argus-production-gray-poison-20261019").contentType("application/json").deliveryMode(2).build(),"{}".getBytes(StandardCharsets.UTF_8));
+                channel.waitForConfirmsOrDie(5000);System.out.println("{\"controlledPoisonPublished\":true}");
+            }else if(args[1].equals("remove-poison")){
+                var message=channel.basicGet("argus.task-events.dead",false);
+                if(message==null)throw new IllegalStateException("controlled poison missing");
+                if(!"argus-production-gray-poison-20261019".equals(message.getProps().getMessageId())){
+                    channel.basicNack(message.getEnvelope().getDeliveryTag(),false,true);throw new IllegalStateException("foreign dead letter preserved");
+                }
+                channel.basicAck(message.getEnvelope().getDeliveryTag(),false);System.out.println("{\"controlledPoisonRemoved\":true}");
             }else throw new IllegalArgumentException("unknown readiness phase");
         }
     }

@@ -1,0 +1,98 @@
+{
+  "scope": "PRODUCTION_READ_ONLY_BROWSER",
+  "passed": true,
+  "checks": [
+    {
+      "name": "protected API rejects missing token",
+      "passed": true
+    },
+    {
+      "name": "public IP entry 80 reaches read-only backend",
+      "passed": true
+    },
+    {
+      "name": "public IP entry 9090 reaches read-only backend",
+      "passed": true
+    },
+    {
+      "name": "live backend and read-only health",
+      "passed": true
+    },
+    {
+      "name": "live inventory is populated",
+      "passed": true
+    },
+    {
+      "name": "homepage logo loads",
+      "passed": true
+    },
+    {
+      "name": "console shows live connection and explicit read-only boundary",
+      "passed": true
+    },
+    {
+      "name": "legacy mock records are explicitly labeled",
+      "passed": true
+    },
+    {
+      "name": "node UI agrees with API count",
+      "passed": true
+    },
+    {
+      "name": "instance UI agrees with API count",
+      "passed": true
+    },
+    {
+      "name": "write buttons respect server capability",
+      "passed": true
+    },
+    {
+      "name": "task page matches actual history, no demo substitution",
+      "passed": true
+    },
+    {
+      "name": "real Agent log read succeeds",
+      "passed": true
+    },
+    {
+      "name": "log identity matches selected instance",
+      "passed": true
+    },
+    {
+      "name": "production monitor evaluates rules",
+      "passed": true
+    },
+    {
+      "name": "monitor UI agrees with live API",
+      "passed": true
+    },
+    {
+      "name": "real HOST metric history available",
+      "passed": true
+    },
+    {
+      "name": "no uncaught browser exceptions",
+      "passed": true
+    },
+    {
+      "name": "browser verification issued only read requests",
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "unexpectedWrites": [],
+  "inventory": {
+    "nodes": 3,
+    "instances": 14,
+    "tasks": 0,
+    "onlineNodes": 2,
+    "realHostNodes": 2,
+    "legacyMockNodes": 1
+  },
+  "logLineCount": 100,
+  "monitor": {
+    "alerts": 13,
+    "activeRules": [],
+    "historyVerified": true
+  }
+}

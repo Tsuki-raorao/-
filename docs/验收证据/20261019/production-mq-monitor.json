@@ -1,0 +1,35 @@
+{
+  "scope": "PRODUCTION_CONTROLLED_POISON_MONITOR",
+  "passed": true,
+  "before": {
+    "ready": 0,
+    "consumers": 1,
+    "dead": 0
+  },
+  "publish": {
+    "controlledPoisonPublished": true
+  },
+  "trigger": {
+    "rule_key": "MQ_DEAD_LETTERS",
+    "state": "ACTIVE",
+    "observed_value": 1.0,
+    "checked_at": "2026-10-19T12:52:21.469+00:00",
+    "episodes": 1
+  },
+  "cleanup": {
+    "controlledPoisonRemoved": true
+  },
+  "recovery": {
+    "rule_key": "MQ_DEAD_LETTERS",
+    "state": "RESOLVED",
+    "observed_value": 0.0,
+    "checked_at": "2026-10-19T12:52:52.629+00:00",
+    "episodes": 1
+  },
+  "after": {
+    "ready": 0,
+    "consumers": 1,
+    "dead": 0
+  },
+  "taskCountUnchanged": true
+}

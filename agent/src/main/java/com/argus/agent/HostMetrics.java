@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.io.IOException;
 import java.util.Locale;
 
-/** 通过 JDK 管理接口读取主机级只读 CPU 和内存快照。 */
+/** 只读主机指标：JDK CPU，Linux 内存使用 /proc 的可用量，其他系统使用 JDK。 */
 public record HostMetrics(Double cpuPercent, Long memoryBytes, Long memoryTotalBytes) {
     public static HostMetrics read() {
         try {

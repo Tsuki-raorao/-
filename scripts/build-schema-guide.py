@@ -102,7 +102,7 @@ for fk in data["foreignKeys"]:
     fks[fk["TABLE_NAME"]].append(fk)
 
 lines = ["# 02 数据库设计与字段字典", "",
-    f"本表根据隔离 MySQL 实际迁移后的 information_schema 元数据生成，当前快照为 V1–V{data['migrations'][-1]['version']}。不是手工猜测 SQL，也不包含生产业务行或数据库密码。", "",
+    f"本表根据{'生产' if data.get('scope','').startswith('production') else '隔离'} MySQL 实际迁移后的 information_schema 元数据生成，当前快照为 V1–V{data['migrations'][-1]['version']}。不是手工猜测 SQL，也不包含生产业务行或数据库密码。", "",
     "## 设计主线", "",
     "资源目录（nodes/instances）保存最近观测；tasks 保存操作事实；queue 仅管调度；events 追加历史；locks 限制同实例并发；resolutions 保存人工核对；outbox/receipts 管事件投递。身份表已有骨架，完整用户体系按需求后做。", "",
     "事务内保存同一业务事实，网络调用在事务外。外键保护资源引用；唯一键保证幂等；版本/租约决定谁能更新；索引改善访问路径。它们不能相互替代。", "",
@@ -118,6 +118,8 @@ for table, columns in tables.items():
             raise RuntimeError(f"Missing field meaning: {table}.{name}")
         default = col["COLUMN_DEFAULT"] if col["COLUMN_DEFAULT"] is not None else "无/NULL"
         meaning = "监控服务评估并记录该点的时间，原始 Agent 采样新鲜度在写入前校验" if table == "monitor_samples" and name == "sampled_at" else meanings[name]
+        if table == "nodes" and name == "memory_bytes":
+            meaning = "主机已用内存，单位 byte；Linux 为 MemTotal−MemAvailable，含可回收缓存的空闲口径不再用于告警；无法确认时 NULL"
         lines.append(f"| `{name}` | `{col['COLUMN_TYPE']}` | {col['IS_NULLABLE']} | `{default}` | {meaning} |")
     lines += ["", "**实际索引/约束：**", ""]
     for name, parts in indexes[table].items():

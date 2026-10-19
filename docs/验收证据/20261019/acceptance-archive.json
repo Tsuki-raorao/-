@@ -1,0 +1,32 @@
+{
+  "scope": "ISOLATED_ACCEPTANCE_ARCHIVE",
+  "passed": true,
+  "databasesArchived": [
+    "argus_test_stage1",
+    "argus_test_acceptance",
+    "argus_test_perf",
+    "argus_test_collection",
+    "argus_test_release"
+  ],
+  "tasksRetained": 35,
+  "inboxRetained": 35,
+  "gameBaselineUnchanged": true,
+  "testServices": {
+    "argus-acceptance-agent": "inactive",
+    "argus-acceptance-central": "inactive",
+    "argus-acceptance-proxy": "inactive"
+  },
+  "testContainersStopped": [
+    "argus-mq-check-20261019",
+    "argus-redis-check-20261019",
+    "argus-stage1-mysql"
+  ],
+  "productionAgentActive": true,
+  "productionBrokerRunning": true,
+  "archiveChecksums": {
+    "acceptance-files.tar.gz": "3f5178001f017e0af19011679f8adf79a59463d04dc451fc801837f3aaeb8da1",
+    "evidence.json": "418dea404d0b3df12a5744e13381809443ad16aec74886e59bed4c37cb64b997",
+    "databases.sql.gz": "95710e13505ae380c975b7775f555c2a46b4018e7d792d6ce2845bef48b50618"
+  },
+  "checkedAt": "2026-10-19T13:17:43.411933+00:00"
+}

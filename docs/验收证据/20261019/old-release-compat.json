@@ -1,0 +1,9 @@
+{
+  "scope": "ISOLATED_OLD_V9_APPLICATION_ON_V12_SCHEMA",
+  "passed": true,
+  "nodes": 3,
+  "instances": 14,
+  "tasks": 0,
+  "logs": 1,
+  "readOnly": true
+}

@@ -1,5 +1,5 @@
 {
-  "scope": "isolated test schema; metadata only",
+  "scope": "production schema metadata only; no application rows or credentials",
   "migrations": [
     {
       "version": "1",
