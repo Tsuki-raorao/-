@@ -1,0 +1,13 @@
+{
+  "scope": "ISOLATED_REAL_DOCKER",
+  "gameBaselineUnchanged": true,
+  "centralTaskCount": 17,
+  "inboxRecordCount": 17,
+  "allCommandsMatchInbox": true,
+  "unresolvedLocks": 0,
+  "fixture": {
+    "running": false,
+    "startedAt": "2026-10-19T11:44:28.675267737Z",
+    "finishedAt": "2026-10-19T11:44:51.809853529Z"
+  }
+}

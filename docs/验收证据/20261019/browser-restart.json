@@ -1,0 +1,74 @@
+{
+  "startedAt": "2026-10-19T11:44:06.245Z",
+  "passed": true,
+  "actions": [
+    {
+      "id": "fd3fff92-2523-4748-8b7a-8ae863ca17bd",
+      "commandId": "aae6dc9f-8f7a-4480-8811-14a205459d16",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "eventCount": 5,
+      "agentPostDelta": 1
+    },
+    {
+      "id": "c1a288d4-bd25-4449-a2e0-80ee1f432631",
+      "commandId": "d32da32b-44d0-4e3a-a061-70a7bf83c645",
+      "action": "RESTART",
+      "status": "SUCCEEDED",
+      "eventCount": 4,
+      "agentPostDelta": 1
+    },
+    {
+      "id": "524f6fda-ac40-4129-a2c1-b396b434ed06",
+      "commandId": "106a195e-eb86-4024-a540-90b5c7cebb5c",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "eventCount": 5,
+      "agentPostDelta": 1
+    }
+  ],
+  "checks": [
+    {
+      "name": "only explicitly allowed fixture is exposed",
+      "passed": true
+    },
+    {
+      "name": "202 only acknowledges durable acceptance",
+      "passed": true
+    },
+    {
+      "name": "event timeline matches final state",
+      "passed": true
+    },
+    {
+      "name": "one Agent POST for START task",
+      "passed": true
+    },
+    {
+      "name": "202 only acknowledges durable acceptance",
+      "passed": true
+    },
+    {
+      "name": "event timeline matches final state",
+      "passed": true
+    },
+    {
+      "name": "one Agent POST for RESTART task",
+      "passed": true
+    },
+    {
+      "name": "202 only acknowledges durable acceptance",
+      "passed": true
+    },
+    {
+      "name": "event timeline matches final state",
+      "passed": true
+    },
+    {
+      "name": "one Agent POST for STOP task",
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "scope": "ISOLATED_REAL_DOCKER"
+}

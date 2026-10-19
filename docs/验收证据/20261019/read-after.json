@@ -1,0 +1,66 @@
+{
+  "scope": "ISOLATED_CLOUD_SYNTHETIC_READ_LOAD",
+  "database": "argus_test_perf",
+  "label": "after",
+  "concurrency": 20,
+  "configuredSeconds": 300,
+  "elapsedSeconds": 300.037,
+  "requestsPerSecond": 462.743,
+  "overall": {
+    "requests": 138840,
+    "errors": 0,
+    "errorRate": 0.0,
+    "p50ms": 34.759,
+    "p95ms": 88.367,
+    "p99ms": 141.177,
+    "maxMs": 575.563
+  },
+  "endpoints": {
+    "/api/nodes": {
+      "requests": 27769,
+      "errors": 0,
+      "errorRate": 0.0,
+      "p50ms": 27.453,
+      "p95ms": 76.25,
+      "p99ms": 105.527,
+      "maxMs": 306.774
+    },
+    "/api/instances": {
+      "requests": 27768,
+      "errors": 0,
+      "errorRate": 0.0,
+      "p50ms": 32.513,
+      "p95ms": 84.48,
+      "p99ms": 133.466,
+      "maxMs": 402.465
+    },
+    "/api/tasks": {
+      "requests": 27767,
+      "errors": 0,
+      "errorRate": 0.0,
+      "p50ms": 62.559,
+      "p95ms": 105.339,
+      "p99ms": 198.903,
+      "maxMs": 575.563
+    },
+    "/api/logs?limit=100": {
+      "requests": 27766,
+      "errors": 0,
+      "errorRate": 0.0,
+      "p50ms": 27.477,
+      "p95ms": 77.023,
+      "p99ms": 114.728,
+      "maxMs": 300.636
+    },
+    "/api/logs?instanceId=perf-instance-0&limit=100": {
+      "requests": 27770,
+      "errors": 0,
+      "errorRate": 0.0,
+      "p50ms": 27.291,
+      "p95ms": 77.439,
+      "p99ms": 112.74,
+      "maxMs": 297.879
+    }
+  },
+  "targetPassed": true
+}

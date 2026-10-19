@@ -9,12 +9,13 @@ import InstanceTable from './components/InstanceTable.vue'
 import TaskDetail from './components/TaskDetail.vue'
 import TaskResolution from './components/TaskResolution.vue'
 import ProjectAccess from './components/ProjectAccess.vue'
+import MonitoringPanel from './components/MonitoringPanel.vue'
 import { readReviewIntent } from './task-resolution'
 import { authSession, type AuthState } from './auth-session'
 import { clearLegacySecrets, recoveryScope, scopedIntentStorage, readRecovery } from './scoped-recovery'
 
-type Page = 'overview' | 'nodes' | 'instances' | 'tasks' | 'logs' | 'access'
-const nav = [{ id: 'overview', label: '概览', icon: '◈' }, { id: 'nodes', label: '节点', icon: '⌘' }, { id: 'instances', label: '实例', icon: '▣' }, { id: 'tasks', label: '任务', icon: '✓' }, { id: 'logs', label: '日志', icon: '≡' }, { id: 'access', label: '成员权限', icon: '♙' }] as const
+type Page = 'overview' | 'nodes' | 'instances' | 'tasks' | 'logs' | 'access' | 'monitoring'
+const nav = [{ id: 'overview', label: '概览', icon: '◈' }, { id: 'nodes', label: '节点', icon: '⌘' }, { id: 'instances', label: '实例', icon: '▣' }, { id: 'tasks', label: '任务', icon: '✓' }, { id: 'logs', label: '日志', icon: '≡' }, { id: 'monitoring', label: '监控告警', icon: '♧' }, { id: 'access', label: '成员权限', icon: '♙' }] as const
 const page = ref<Page>(readPage())
 const landing = ref(typeof window !== 'undefined' && !window.location.hash)
 const nodes = ref<NodeItem[]>([])
@@ -453,6 +454,10 @@ onUnmounted(() => {
               <div v-else class="log-lines"><div v-for="(line, index) in filteredLogs" :key="index" class="log-line"><span>{{ line }}</span></div></div>
             </div>
           </section>
+        </template>
+        <template v-else-if="page === 'monitoring'">
+          <MonitoringPanel v-if="connected" :key="`${authState.project?.id || 'legacy'}:${authState.identity?.userId || ''}`" :nodes="nodes" />
+          <section v-else class="panel"><div class="empty-state">请先连接控制中心后查看监控。</div></section>
         </template>
         <template v-else-if="page === 'access'">
           <ProjectAccess v-if="identityMode && authState.phase === 'ready'" :project="authState.project" :read-only="readOnly || Boolean(authState.config?.readOnly)" @changed="accessChanged" />

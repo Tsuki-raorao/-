@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "scope": "ISOLATED_REAL_BROKER_MONITORING",
+  "observations": [
+    {
+      "rule_key": "MQ_QUEUE_BACKLOG",
+      "state": "ACTIVE",
+      "observed_value": 120.0,
+      "checked_at": "2026-10-19T11:41:23.364+00:00",
+      "episodes": 1
+    },
+    {
+      "rule_key": "MQ_QUEUE_BACKLOG",
+      "state": "RESOLVED",
+      "observed_value": 0.0,
+      "checked_at": "2026-10-19T11:41:53.847+00:00",
+      "episodes": 1
+    },
+    {
+      "rule_key": "MQ_DEAD_LETTERS",
+      "state": "ACTIVE",
+      "observed_value": 1.0,
+      "checked_at": "2026-10-19T11:41:58.922+00:00",
+      "episodes": 2
+    },
+    {
+      "rule_key": "MQ_DEAD_LETTERS",
+      "state": "RESOLVED",
+      "observed_value": 0.0,
+      "checked_at": "2026-10-19T11:42:03.971+00:00",
+      "episodes": 2
+    }
+  ],
+  "publish": {
+    "publishedDuplicates": 120
+  },
+  "duplicateReceiptCount": 1,
+  "poison": {
+    "publishedPoison": 1
+  },
+  "deadLetterCleanup": {
+    "removedOwnPoison": 1
+  },
+  "finalQueueCounts": {
+    "ready": 0,
+    "dead": 0
+  },
+  "taskCountUnchanged": true
+}

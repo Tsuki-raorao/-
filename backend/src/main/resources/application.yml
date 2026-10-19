@@ -22,6 +22,12 @@ spring:
     enabled: true
     locations: classpath:db/migration
 argus:
+  monitoring:
+    enabled: ${ARGUS_MONITORING_ENABLED:false}
+    stale-seconds: ${ARGUS_MONITORING_STALE_SECONDS:180}
+    cpu-threshold: ${ARGUS_MONITORING_CPU_THRESHOLD:85}
+    memory-threshold: ${ARGUS_MONITORING_MEMORY_THRESHOLD:90}
+    interval-ms: ${ARGUS_MONITORING_INTERVAL_MS:30000}
   redis:
     enabled: ${ARGUS_REDIS_ENABLED:false}
     key-prefix: ${ARGUS_REDIS_KEY_PREFIX:argus:}

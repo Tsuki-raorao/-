@@ -1,0 +1,325 @@
+{
+  "startedAt": "2026-10-19T11:27:05.979Z",
+  "passed": true,
+  "actions": [
+    {
+      "id": "6cb79713-6f1e-4b06-841b-5fdf6b9320f8",
+      "commandId": "a034dafb-11b3-450b-a80b-ebe2ebcca78f",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "eventCount": 5
+    },
+    {
+      "id": "604d6cd7-0224-441e-a10e-c0d98d2d3b98",
+      "commandId": "79cd5d5c-6277-4dd4-8f7b-c7d496d9d42e",
+      "action": "RESTART",
+      "status": "SUCCEEDED",
+      "eventCount": 5
+    },
+    {
+      "id": "afcb4da0-3275-411d-b2b3-a27057d6cb20",
+      "commandId": "f3826a9c-f26b-4e19-9330-3af50cff0ac9",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "eventCount": 5
+    },
+    {
+      "id": "097d1e38-31bf-490f-ae45-30efed03eea2",
+      "commandId": "6d934d1d-adda-4e52-915f-365a09769524",
+      "action": "START",
+      "status": "UNKNOWN",
+      "eventCount": 5
+    },
+    {
+      "id": "f0f069e6-da55-4ee2-afa1-a8b29d916e87",
+      "commandId": "32dfb563-cdaa-476c-a6c8-c6c595972df1",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "eventCount": 5
+    }
+  ],
+  "checks": [
+    {
+      "name": "only explicitly allowed fixture is exposed",
+      "passed": true
+    },
+    {
+      "name": "202 only acknowledges durable acceptance",
+      "passed": true
+    },
+    {
+      "name": "event timeline matches final state",
+      "passed": true
+    },
+    {
+      "name": "202 only acknowledges durable acceptance",
+      "passed": true
+    },
+    {
+      "name": "event timeline matches final state",
+      "passed": true
+    },
+    {
+      "name": "202 only acknowledges durable acceptance",
+      "passed": true
+    },
+    {
+      "name": "event timeline matches final state",
+      "passed": true
+    },
+    {
+      "name": "202 only acknowledges durable acceptance",
+      "passed": true
+    },
+    {
+      "name": "event timeline matches final state",
+      "passed": true
+    },
+    {
+      "name": "lost acknowledgement causes no repeated agent POST",
+      "passed": true
+    },
+    {
+      "name": "review requires two explicit risk acknowledgements",
+      "passed": true
+    },
+    {
+      "name": "manual review preserves original UNKNOWN",
+      "passed": true
+    },
+    {
+      "name": "manual review performs no container action",
+      "passed": true
+    },
+    {
+      "name": "202 only acknowledges durable acceptance",
+      "passed": true
+    },
+    {
+      "name": "event timeline matches final state",
+      "passed": true
+    },
+    {
+      "name": "browser renders recovered node alarm",
+      "passed": true
+    },
+    {
+      "name": "no browser page exceptions",
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "scope": "ISOLATED_REAL_DOCKER",
+  "resolution": {
+    "id": "0c70b787-87fd-49b5-8b10-13ed1001dda1",
+    "status": "APPLIED",
+    "originalTaskId": "097d1e38-31bf-490f-ae45-30efed03eea2"
+  },
+  "monitoring": {
+    "enabled": true,
+    "alerts": [
+      {
+        "id": "6f1e948a-bf50-4a13-80dd-5d3f2253b4d9",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "rule_key": "TASK_FAILURES",
+        "resource_id": "project",
+        "title": "近期任务失败或结果未知",
+        "severity": "WARNING",
+        "state": "ACTIVE",
+        "observation_state": "KNOWN",
+        "observed_value": 1,
+        "threshold_value": 1,
+        "summary": "滑动窗口内 FAILED/UNKNOWN 任务；窗口外告警恢复不改变原任务",
+        "opened_at": "2026-10-19T11:24:12.377+00:00",
+        "resolved_at": null,
+        "checked_at": "2026-10-19T11:29:13.724+00:00",
+        "episodes": 2
+      },
+      {
+        "id": "52ae173e-0c8a-4936-aabc-0bf1a83969d1",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "rule_key": "CPU_HIGH",
+        "resource_id": "acceptance-node",
+        "title": "CPU 使用率过高",
+        "severity": "WARNING",
+        "state": "RESOLVED",
+        "observation_state": "KNOWN",
+        "observed_value": 7.64,
+        "threshold_value": 85,
+        "summary": "未知指标不视为恢复",
+        "opened_at": null,
+        "resolved_at": null,
+        "checked_at": "2026-10-19T11:29:13.724+00:00",
+        "episodes": 0
+      },
+      {
+        "id": "69bfbdca-b092-41d9-9c07-9d1a0cad145f",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "rule_key": "MEMORY_HIGH",
+        "resource_id": "acceptance-node",
+        "title": "内存使用率过高",
+        "severity": "WARNING",
+        "state": "RESOLVED",
+        "observation_state": "KNOWN",
+        "observed_value": 22.015380859375,
+        "threshold_value": 90,
+        "summary": "未知指标不视为恢复",
+        "opened_at": null,
+        "resolved_at": null,
+        "checked_at": "2026-10-19T11:29:13.724+00:00",
+        "episodes": 0
+      },
+      {
+        "id": "14f8f8c6-536a-4177-9308-0353d43be851",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "rule_key": "MQ_DEAD_LETTERS",
+        "resource_id": "platform",
+        "title": "死信队列非空",
+        "severity": "CRITICAL",
+        "state": "RESOLVED",
+        "observation_state": "KNOWN",
+        "observed_value": 0,
+        "threshold_value": 1,
+        "summary": "死信保留待人工分析，不自动重放",
+        "opened_at": null,
+        "resolved_at": null,
+        "checked_at": "2026-10-19T11:29:13.724+00:00",
+        "episodes": 0
+      },
+      {
+        "id": "a74700d5-0d6a-4073-b047-4957aa4f9cfa",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "rule_key": "MQ_QUEUE_BACKLOG",
+        "resource_id": "platform",
+        "title": "消息队列积压",
+        "severity": "WARNING",
+        "state": "RESOLVED",
+        "observation_state": "KNOWN",
+        "observed_value": 0,
+        "threshold_value": 100,
+        "summary": "仅统计 ready 消息，Broker 不可用时为未知",
+        "opened_at": null,
+        "resolved_at": null,
+        "checked_at": "2026-10-19T11:29:13.724+00:00",
+        "episodes": 0
+      },
+      {
+        "id": "cabcb346-71dc-450f-bdae-88f724ba4c0c",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "rule_key": "NODE_OFFLINE",
+        "resource_id": "acceptance-node",
+        "title": "节点离线或快照过期",
+        "severity": "CRITICAL",
+        "state": "RESOLVED",
+        "observation_state": "KNOWN",
+        "observed_value": 0,
+        "threshold_value": 1,
+        "summary": "按最近完整同步与节点状态判断",
+        "opened_at": "2026-10-19T11:29:03.131+00:00",
+        "resolved_at": "2026-10-19T11:29:13.724+00:00",
+        "checked_at": "2026-10-19T11:29:13.724+00:00",
+        "episodes": 3
+      },
+      {
+        "id": "801145a2-5c51-4881-b456-9c9c2175efce",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "rule_key": "OUTBOX_BACKLOG",
+        "resource_id": "project",
+        "title": "待发事件积压",
+        "severity": "WARNING",
+        "state": "RESOLVED",
+        "observation_state": "KNOWN",
+        "observed_value": 0,
+        "threshold_value": 1,
+        "summary": "超过等待阈值仍未发布的 Outbox",
+        "opened_at": null,
+        "resolved_at": null,
+        "checked_at": "2026-10-19T11:29:13.724+00:00",
+        "episodes": 0
+      }
+    ],
+    "events": [
+      {
+        "id": "1bcec9b3-f2f3-4f1b-ab82-debae80ff932",
+        "alert_id": "cabcb346-71dc-450f-bdae-88f724ba4c0c",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "state": "RESOLVED",
+        "metric_value": 0,
+        "summary": "按最近完整同步与节点状态判断",
+        "occurred_at": "2026-10-19T11:29:13.724+00:00"
+      },
+      {
+        "id": "660cf275-5af3-4544-9564-12a0147b709c",
+        "alert_id": "cabcb346-71dc-450f-bdae-88f724ba4c0c",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "state": "ACTIVE",
+        "metric_value": 1,
+        "summary": "按最近完整同步与节点状态判断",
+        "occurred_at": "2026-10-19T11:29:03.131+00:00"
+      },
+      {
+        "id": "bc6ed5a3-b5f0-4aef-8d62-a006ac665cfe",
+        "alert_id": "cabcb346-71dc-450f-bdae-88f724ba4c0c",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "state": "RESOLVED",
+        "metric_value": 0,
+        "summary": "按最近完整同步与节点状态判断",
+        "occurred_at": "2026-10-19T11:24:37.635+00:00"
+      },
+      {
+        "id": "6640059d-ba54-4ec1-90b0-6d64fee8a51c",
+        "alert_id": "cabcb346-71dc-450f-bdae-88f724ba4c0c",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "state": "ACTIVE",
+        "metric_value": 1,
+        "summary": "按最近完整同步与节点状态判断",
+        "occurred_at": "2026-10-19T11:24:32.591+00:00"
+      },
+      {
+        "id": "b0e57288-14a9-4153-b08d-c0463fab3f92",
+        "alert_id": "6f1e948a-bf50-4a13-80dd-5d3f2253b4d9",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "state": "ACTIVE",
+        "metric_value": 1,
+        "summary": "滑动窗口内 FAILED/UNKNOWN 任务；窗口外告警恢复不改变原任务",
+        "occurred_at": "2026-10-19T11:24:12.377+00:00"
+      },
+      {
+        "id": "633ad629-577f-49c1-9eb8-43a285c6a484",
+        "alert_id": "6f1e948a-bf50-4a13-80dd-5d3f2253b4d9",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "state": "RESOLVED",
+        "metric_value": 0,
+        "summary": "滑动窗口内 FAILED/UNKNOWN 任务；窗口外告警恢复不改变原任务",
+        "occurred_at": "2026-10-19T11:23:52.187+00:00"
+      },
+      {
+        "id": "a4ff3933-bd4b-446c-ba83-7a4c343ce76d",
+        "alert_id": "6f1e948a-bf50-4a13-80dd-5d3f2253b4d9",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "state": "ACTIVE",
+        "metric_value": 1,
+        "summary": "滑动窗口内 FAILED/UNKNOWN 任务；窗口外告警恢复不改变原任务",
+        "occurred_at": "2026-10-19T11:18:55.920+00:00"
+      },
+      {
+        "id": "0599d9d7-65bf-4e30-81cf-f809ad45a199",
+        "alert_id": "cabcb346-71dc-450f-bdae-88f724ba4c0c",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "state": "RESOLVED",
+        "metric_value": 0,
+        "summary": "按最近完整同步与节点状态判断",
+        "occurred_at": "2026-10-19T11:18:40.700+00:00"
+      },
+      {
+        "id": "8d306ac3-64e8-4b5e-a7d5-1c4a3ad30bb7",
+        "alert_id": "cabcb346-71dc-450f-bdae-88f724ba4c0c",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "state": "ACTIVE",
+        "metric_value": 1,
+        "summary": "按最近完整同步与节点状态判断",
+        "occurred_at": "2026-10-19T11:09:51.334+00:00"
+      }
+    ]
+  }
+}

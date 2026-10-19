@@ -1,0 +1,138 @@
+# 05 性能测试与 SQL 优化
+
+## 一、本轮解决的具体问题
+
+小规模数据下能展示页面，不代表任务和日志历史增长后仍能使用。本轮在云服务器上建立独立 `argus_test_perf` 数据库，插入 1 个节点、100 个实例、10 万条历史任务和 10 万条日志，先测原实现，再针对实际执行计划增加 V12 索引，最后用同样负载复测。
+
+这是**隔离云环境合成负载**，不是生产用户流量。没有向真实游戏容器发送压测操作，历史任务没有写入 task_queue。
+
+## 二、环境和流量怎么设计
+
+- 云主机：4 vCPU、约 16GB 内存，和现有服务共用宿主机；没有声称独占机器。
+- 控制中心：Java 21、Spring Boot、JVM Xmx512m，systemd CPUQuota=100%、MemoryMax=768M。
+- MySQL：8.0，独立容器，1 CPU、768MiB 限制；和控制中心位于同一宿主机，通过 loopback TCP 通信。
+- 本轮性能服务关闭 Agent 采集、MQ、监控和 Redis，保持 API 只读。这样可以定位读取链路，不把通知或真实服务器操作混成同一个容量指标。
+- 发压器：同一云主机上的 Python 标准库线程池，20 个闭环并发，每次收到结果才发下一次。不是固定到达率模型，也不代表互联网用户端延迟。
+- 5 类请求轮换、各约 20%：节点列表、实例列表、任务列表、项目日志最近 100 条、单实例日志最近 100 条。
+- 正式计时前每类请求预热 3 次；正式运行 300 秒；单请求超时 10 秒。计时包括 HTTP、服务端处理、传输和客户端 JSON 解码/业务响应验证。
+- 非 200、业务 code 非 0、数据非列表、测试数据集意外返回空列表和网络异常均记为错误，不能用空响应凑成绩。
+- 延迟分位数包含成功和失败请求；没有删掉超时请求后再计算 P95。
+
+## 三、完整对照结果
+
+| 指标 | 优化前 V11 | 优化后 V12 |
+|---|---:|---:|
+| 并发数 | 20 | 20 |
+| 目标发压时长 | 300s | 300s |
+| 包括最后在途请求的总时长 | 305.874s | 300.037s |
+| 完成请求数 | 1,461 | 138,840 |
+| 实际吞吐 | 4.776 次/s | 462.743 次/s |
+| P50 | 3404.557ms | 34.759ms |
+| P95 | 10010.060ms | 88.367ms |
+| P99 | 10011.472ms | 141.177ms |
+| 最大耗时 | 10017.695ms | 575.563ms |
+| 错误数 | 138 | 0 |
+| 错误率 | 9.4456% | 0% |
+| P95≤500ms、错误率<0.1% 目标 | 未达到 | 达到 |
+
+优化后各接口 P95：节点 76.250ms、实例 84.480ms、任务 105.339ms、项目日志 77.023ms、实例日志 77.439ms。不能拿整体 P95 说“每次请求均小于 500ms”；最大值仍有 575.563ms。
+
+基线任务列表 296 次请求中 135 次错误，是主要超时来源。其他接口也因共享数据库/连接资源受到拖累。
+
+原始摘要见 [优化前](../验收证据/20261019/read-before.json)、[优化后](../验收证据/20261019/read-after.json)。逐请求 CSV 和资源采样归档在忽略目录 `local-private/stage2-acceptance-20261019/argus-read-bench-20261019.tgz`；SHA-256：`9a2624ab40965e1b3f05e48b0c0641188334aaea726e71c5cda420a88dc92197`。
+
+## 四、怎么定位慢 SQL
+
+源码入口：`LogController → LogService → LogRepository.findByInstanceId(...,projectId)`；`TaskController → TaskService → TaskRepository.findAll(projectId)`；`MonitoringService.evaluate` 的失败统计。
+
+这次用 `EXPLAIN ANALYZE` 直接执行真实 SQL，观察 actual rows、实际耗时、排序节点和索引范围。没有开启生产 general log，也没有伪造“从慢日志发现”的过程。线上进一步定位应结合慢日志/Performance Schema、接口追踪、连接池等待和资源采样。
+
+### 1. 项目日志：等值过滤后按时间取最近记录
+
+```sql
+SELECT id,instance_id,log_timestamp,level,message
+FROM logs WHERE project_id=?
+ORDER BY log_timestamp DESC LIMIT 100;
+```
+
+原有 `idx_log_project(project_id)` 只解决项目过滤；此数据集同项目有 10 万条日志，仍读 10 万行后排序。V12 新增：
+
+```sql
+CREATE INDEX idx_logs_project_time ON logs(project_id,log_timestamp);
+```
+
+项目是等值前缀，后续时间有序，MySQL 反向扫描即可取得最新 100 行，无须将全部匹配行排序。`message` 最长 4000 字符，不为避免 100 次回表而把整段日志塞进宽覆盖索引。
+
+隔离、无正式负载时的单次计划：158ms、读取 100000 行并排序 → 0.312ms、索引读取 100 行。不是反复采样的均值；不能将此数字直接当接口延迟。
+
+### 2. 任务列表：混合排序方向
+
+```sql
+SELECT * FROM tasks WHERE project_id=?
+ORDER BY created_at DESC,id LIMIT 100;
+```
+
+`id` 默认 ASC，原 V7 索引 `(project_id,created_at,id)` 全升序。整体反向扫描会变成 `created_at DESC,id DESC`，与查询顺序不同。此次执行计划选择扫描项目全部历史再排序，读取 100000 行。
+
+V12 新增精确匹配方向的索引：
+
+```sql
+CREATE INDEX idx_tasks_project_created_order
+ON tasks(project_id,created_at DESC,id ASC);
+```
+
+单次计划由 379ms、扫描 100000 行并排序 → 0.384ms、直接按索引取得 100 行。保留原排序与返回语义，没有通过减少历史数据量或放宽查询条件制造提升。原索引暂未删除；后续确认其他访问路径后可评估冗余索引及写入成本。
+
+### 3. 近期失败统计：联合范围与覆盖计数
+
+```sql
+SELECT COUNT(*) FROM tasks
+WHERE project_id=? AND status IN ('FAILED','UNKNOWN')
+  AND updated_at>=?;
+```
+
+旧计划按 project_id 找出全部 10 万任务后再过滤。V12 新增：
+
+```sql
+CREATE INDEX idx_tasks_project_status_updated
+ON tasks(project_id,status,updated_at);
+```
+
+等值项目前缀后，两个状态形成范围，再限制更新时间；计数所需字段都在索引里。此次固定截止时间下，覆盖范围扫描读取 20 行，单次计划由 169ms 降至 0.0594ms。这个计数查询是 SQL 专项，不在上述 5 类 HTTP 压测里，不能说它直接产生了全部吞吐收益。
+
+两份完整计划：[优化前](../验收证据/20261019/sql-before.json)、[优化后](../验收证据/20261019/sql-after.json)。MySQL 输出中的估计 rows/cost 与 actual rows/time 是不同信息；本章扫描数量来自 actual。
+
+## 五、索引以代码交付，为什么不用手工改生产库
+
+`backend/src/main/java/db/migration/V12__query_indexes.java` 通过 Flyway 添加三组索引。隔离 MySQL V11→V12 保留了同一批任务和日志；H2 完整迁移及定向回归也通过。MySQL DDL 可能隐式提交，生产发布前仍需备份和评估建索引锁影响，不能把 H2 事务回滚当成 MySQL DDL 回滚承诺。
+
+联合索引增加磁盘和写入维护成本。这里只有三条明确的查询依据，没有给每个字段盲目加索引。
+
+## 六、资源说明与结论边界
+
+优化前采样覆盖压测中的约 180 秒，MySQL 平均占约一个逻辑 CPU 的 99.97%，控制中心约 3.52%，显示数据库是主要等待点。优化后采样约 300 秒，控制中心和 MySQL 分别约 86.23%、86.21%。CPU 百分比以一个逻辑 CPU 为 100%，不是整台 4 核主机的占用率。
+
+cgroup memory.current 采样峰值：控制中心前/后约 257.94/277.88MiB，MySQL 前/后约 606.19/402.48MiB；包含 cgroup 计入的缓存，不能称为 JVM 堆或纯进程 RSS。两轮资源窗口不完全相同，不能据此单独宣传内存优化。
+
+此次结论：在这一环境、数据分布、并发与查询组合下，索引优化后达到初始读取目标。没有测试峰值极限，也未证明 462 次/s 的持续生产容量、百万节点采集能力或写入吞吐。旧/新进程有重启、缓存与同宿主服务活动差异；执行计划变化和完整对照负载共同支持本次优化，不能保证其他数据分布获得相同比例收益。
+
+## 七、脚本、变量和复现路径
+
+| 文件/变量 | 做什么 | 为什么 |
+|---|---|---|
+| `performance-fixture.py` | 只在 argus_test_perf 建数据、启动只读服务、输出执行计划 | 明确数据集，防止污染业务任务队列 |
+| `cloud-read-benchmark.py` | 20 线程轮换真实接口，写 CSV 与摘要 | 不用健康接口代替业务链路 |
+| `resource-sampler.py` | 读取指定 cgroup CPU、节流和内存 | 区分服务瓶颈与整机负载 |
+| `deadline` | 本轮发压截止的单调时钟时间 | 系统时间校准不改变压测时长 |
+| `barrier` | 并发线程启动屏障 | 让线程大致同时进入测量 |
+| `latency_ms` | 发请求前到 JSON 验证完成的耗时 | 不把单 SQL 时间冒充接口时间 |
+| `error_type` | 异常类别，不含密钥/完整连接异常 | 保留失败计数同时避免泄密 |
+| `targetPassed` | P95/错误率是否达到初始目标 | 与退出码、是否运行完区分 |
+
+先部署 V11 隔离服务 → `seed` 一次 → `explain` → `--label before --concurrency 20 --seconds 300` → V12 迁移 → 相同数据再次 `explain` → `--label after --concurrency 20 --seconds 300`。脚本执行位置是验收云主机，需要私有 env；不能把源码占位符直接当可用连接信息。
+
+## 八、阶段③剩余任务
+
+- 10/50/100 节点的中央采集阶梯测试与快照年龄；当前顺序拉取不能凭读取 QPS 推导节点容量。
+- Redis 超时和不可用的真实降级验证；当前读取结果没有使用 Redis。
+- 不同并发阶梯与写入负载；本轮完成的是 20 并发稳定读取目标，不是系统极限容量。

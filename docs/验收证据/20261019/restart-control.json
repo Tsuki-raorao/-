@@ -1,0 +1,10 @@
+{
+  "taskId": "c1a288d4-bd25-4449-a2e0-80ee1f432631",
+  "commandId": "d32da32b-44d0-4e3a-a061-70a7bf83c645",
+  "agentStateAtRestart": "RUNNING",
+  "status": "SUCCEEDED",
+  "agentProcessUnchanged": true,
+  "controlProcessChanged": true,
+  "inboxRecordCount": 1,
+  "passed": true
+}

@@ -40,7 +40,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new ApiAccessInterceptor(securityProperties, identityMode))
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/health");
+                .excludePathPatterns("/api/health", "/api/auth/config");
         registry.addInterceptor(new WriteProtectionInterceptor(securityProperties)).addPathPatterns("/api/**");
     }
 }

@@ -50,6 +50,16 @@
       "version": "10",
       "description": "task event receipts",
       "success": "1"
+    },
+    {
+      "version": "11",
+      "description": "monitoring alerts",
+      "success": "1"
+    },
+    {
+      "version": "12",
+      "description": "query indexes",
+      "success": "1"
     }
   ],
   "columns": [
@@ -471,6 +481,276 @@
       "TABLE_NAME": "logs",
       "COLUMN_NAME": "project_id",
       "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "COLUMN_NAME": "alert_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "COLUMN_NAME": "state",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "COLUMN_NAME": "metric_value",
+      "COLUMN_TYPE": "double",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "COLUMN_NAME": "summary",
+      "COLUMN_TYPE": "varchar(512)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "COLUMN_NAME": "occurred_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "rule_key",
+      "COLUMN_TYPE": "varchar(48)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "resource_id",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "title",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "severity",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "state",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "observation_state",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "observed_value",
+      "COLUMN_TYPE": "double",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "threshold_value",
+      "COLUMN_TYPE": "double",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "summary",
+      "COLUMN_TYPE": "varchar(512)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "opened_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "resolved_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "checked_at",
+      "COLUMN_TYPE": "timestamp(6)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "COLUMN_NAME": "episodes",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "PRI",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "COLUMN_NAME": "project_id",
+      "COLUMN_TYPE": "varchar(36)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": "MUL",
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "COLUMN_NAME": "resource_id",
+      "COLUMN_TYPE": "varchar(128)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "COLUMN_NAME": "metric",
+      "COLUMN_TYPE": "varchar(48)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "COLUMN_NAME": "metric_value",
+      "COLUMN_TYPE": "double",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "COLUMN_NAME": "observation_state",
+      "COLUMN_TYPE": "varchar(16)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "COLUMN_NAME": "source",
+      "COLUMN_TYPE": "varchar(24)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "COLUMN_KEY": null,
+      "EXTRA": null
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "COLUMN_NAME": "sampled_at",
+      "COLUMN_TYPE": "timestamp(6)",
       "IS_NULLABLE": "NO",
       "COLUMN_DEFAULT": null,
       "COLUMN_KEY": "MUL",
@@ -1941,630 +2221,928 @@
       "INDEX_NAME": "idx_ai_diagnoses_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "created_at"
+      "COLUMN_NAME": "created_at",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "ai_diagnoses",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "flyway_schema_history",
       "INDEX_NAME": "flyway_schema_history_s_idx",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "success"
+      "COLUMN_NAME": "success",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "flyway_schema_history",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "installed_rank"
+      "COLUMN_NAME": "installed_rank",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "identity_config_gate",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "instance_task_locks",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "instance_id"
+      "COLUMN_NAME": "instance_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "instance_task_locks",
       "INDEX_NAME": "task_id",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "task_id"
+      "COLUMN_NAME": "task_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "instances",
       "INDEX_NAME": "idx_instance_project",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "instances",
       "INDEX_NAME": "idx_instances_node_id",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "node_id"
+      "COLUMN_NAME": "node_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "instances",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "instances",
       "INDEX_NAME": "uq_instances_node_agent",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "node_id"
+      "COLUMN_NAME": "node_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "instances",
       "INDEX_NAME": "uq_instances_node_agent",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "agent_instance_id"
+      "COLUMN_NAME": "agent_instance_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "logs",
       "INDEX_NAME": "idx_log_project",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "logs",
       "INDEX_NAME": "idx_logs_instance_timestamp",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "instance_id"
+      "COLUMN_NAME": "instance_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "logs",
       "INDEX_NAME": "idx_logs_instance_timestamp",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "log_timestamp"
+      "COLUMN_NAME": "log_timestamp",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "logs",
+      "INDEX_NAME": "idx_logs_project_time",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "logs",
+      "INDEX_NAME": "idx_logs_project_time",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "log_timestamp",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "logs",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "INDEX_NAME": "fk_monitor_event_alert",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "alert_id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "INDEX_NAME": "idx_monitor_events_project_time",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "INDEX_NAME": "idx_monitor_events_project_time",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "occurred_at",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "INDEX_NAME": "idx_monitor_alerts_project_state",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "INDEX_NAME": "idx_monitor_alerts_project_state",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "state",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "INDEX_NAME": "idx_monitor_alerts_project_state",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "checked_at",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "INDEX_NAME": "uq_monitor_rule_resource",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "INDEX_NAME": "uq_monitor_rule_resource",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "rule_key",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_alerts",
+      "INDEX_NAME": "uq_monitor_rule_resource",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "resource_id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "INDEX_NAME": "idx_monitor_samples_retention",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "sampled_at",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "INDEX_NAME": "idx_monitor_samples_series",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "INDEX_NAME": "idx_monitor_samples_series",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "resource_id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "INDEX_NAME": "idx_monitor_samples_series",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "metric",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "INDEX_NAME": "idx_monitor_samples_series",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "4",
+      "COLUMN_NAME": "sampled_at",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "INDEX_NAME": "idx_monitor_samples_series",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "5",
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "monitor_samples",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "nodes",
       "INDEX_NAME": "idx_node_project",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "nodes",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "project_members",
       "INDEX_NAME": "fk_member_user",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "user_id"
+      "COLUMN_NAME": "user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "project_members",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "project_members",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "user_id"
+      "COLUMN_NAME": "user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "projects",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "resolution_authorizations",
       "INDEX_NAME": "fk_auth_actor",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "actor_user_id"
+      "COLUMN_NAME": "actor_user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "resolution_authorizations",
       "INDEX_NAME": "fk_auth_resolution",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "resolution_id"
+      "COLUMN_NAME": "resolution_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "resolution_authorizations",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "resolution_authorizations",
       "INDEX_NAME": "uq_auth_project_actor_key",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "resolution_authorizations",
       "INDEX_NAME": "uq_auth_project_actor_key",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "actor_user_id"
+      "COLUMN_NAME": "actor_user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "resolution_authorizations",
       "INDEX_NAME": "uq_auth_project_actor_key",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "3",
-      "COLUMN_NAME": "request_key"
+      "COLUMN_NAME": "request_key",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "review_dispatch_permits",
       "INDEX_NAME": "fk_review_permit_actor",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "actor_user_id"
+      "COLUMN_NAME": "actor_user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "review_dispatch_permits",
       "INDEX_NAME": "fk_review_permit_authorization",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "authorization_id"
+      "COLUMN_NAME": "authorization_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "review_dispatch_permits",
       "INDEX_NAME": "fk_review_permit_project",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "review_dispatch_permits",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "review_dispatch_permits",
       "INDEX_NAME": "uq_review_permit_attempt",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "resolution_id"
+      "COLUMN_NAME": "resolution_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "review_dispatch_permits",
       "INDEX_NAME": "uq_review_permit_attempt",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "attempt_no"
+      "COLUMN_NAME": "attempt_no",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_dispatch_permits",
       "INDEX_NAME": "fk_permit_actor",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "actor_user_id"
+      "COLUMN_NAME": "actor_user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_dispatch_permits",
       "INDEX_NAME": "fk_permit_project",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_dispatch_permits",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_dispatch_permits",
       "INDEX_NAME": "uq_permit_attempt",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "task_id"
+      "COLUMN_NAME": "task_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_dispatch_permits",
       "INDEX_NAME": "uq_permit_attempt",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "attempt_no"
+      "COLUMN_NAME": "attempt_no",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_event_outbox",
       "INDEX_NAME": "idx_outbox_due",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "status"
+      "COLUMN_NAME": "status",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_event_outbox",
       "INDEX_NAME": "idx_outbox_due",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "next_attempt_at"
+      "COLUMN_NAME": "next_attempt_at",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_event_outbox",
       "INDEX_NAME": "idx_outbox_due",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "3",
-      "COLUMN_NAME": "lease_until"
+      "COLUMN_NAME": "lease_until",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_event_outbox",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_event_outbox",
       "INDEX_NAME": "uq_outbox_task_sequence",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "task_id"
+      "COLUMN_NAME": "task_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_event_outbox",
       "INDEX_NAME": "uq_outbox_task_sequence",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "event_sequence"
+      "COLUMN_NAME": "event_sequence",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_event_receipts",
       "INDEX_NAME": "idx_receipt_consumed",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "consumed_at"
+      "COLUMN_NAME": "consumed_at",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_event_receipts",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "event_id"
+      "COLUMN_NAME": "event_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_event_receipts",
       "INDEX_NAME": "uq_receipt_task_sequence",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "task_id"
+      "COLUMN_NAME": "task_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_event_receipts",
       "INDEX_NAME": "uq_receipt_task_sequence",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "event_sequence"
+      "COLUMN_NAME": "event_sequence",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_events",
       "INDEX_NAME": "fk_task_event_actor",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "actor_user_id"
+      "COLUMN_NAME": "actor_user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_events",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_events",
       "INDEX_NAME": "uq_event_sequence",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "task_id"
+      "COLUMN_NAME": "task_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_events",
       "INDEX_NAME": "uq_event_sequence",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "event_sequence"
+      "COLUMN_NAME": "event_sequence",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_queue",
       "INDEX_NAME": "idx_queue_due",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "next_run_at"
+      "COLUMN_NAME": "next_run_at",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_queue",
       "INDEX_NAME": "idx_queue_due",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "lease_until"
+      "COLUMN_NAME": "lease_until",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_queue",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "task_id"
+      "COLUMN_NAME": "task_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolution_events",
       "INDEX_NAME": "fk_resolution_event_actor",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "actor_user_id"
+      "COLUMN_NAME": "actor_user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolution_events",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolution_events",
       "INDEX_NAME": "uq_review_event_sequence",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "resolution_id"
+      "COLUMN_NAME": "resolution_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolution_events",
       "INDEX_NAME": "uq_review_event_sequence",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "event_sequence"
+      "COLUMN_NAME": "event_sequence",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolution_queue",
       "INDEX_NAME": "idx_review_queue_due",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "next_run_at"
+      "COLUMN_NAME": "next_run_at",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolution_queue",
       "INDEX_NAME": "idx_review_queue_due",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "lease_until"
+      "COLUMN_NAME": "lease_until",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolution_queue",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "resolution_id"
+      "COLUMN_NAME": "resolution_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolutions",
       "INDEX_NAME": "fk_resolution_active_authorization",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "active_authorization_id"
+      "COLUMN_NAME": "active_authorization_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolutions",
       "INDEX_NAME": "fk_resolutions_actor",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "actor_user_id"
+      "COLUMN_NAME": "actor_user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolutions",
       "INDEX_NAME": "idx_resolutions_project_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolutions",
       "INDEX_NAME": "idx_resolutions_project_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "created_at"
+      "COLUMN_NAME": "created_at",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolutions",
       "INDEX_NAME": "idx_resolutions_project_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "3",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolutions",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolutions",
       "INDEX_NAME": "task_id",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "task_id"
+      "COLUMN_NAME": "task_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolutions",
       "INDEX_NAME": "uq_resolution_project_actor_key",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolutions",
       "INDEX_NAME": "uq_resolution_project_actor_key",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "actor_user_id"
+      "COLUMN_NAME": "actor_user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "task_resolutions",
       "INDEX_NAME": "uq_resolution_project_actor_key",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "3",
-      "COLUMN_NAME": "request_key"
+      "COLUMN_NAME": "request_key",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "fk_tasks_actor",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "actor_user_id"
+      "COLUMN_NAME": "actor_user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "idx_task_project",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "idx_tasks_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "created_at"
+      "COLUMN_NAME": "created_at",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "idx_tasks_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "idx_tasks_instance_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "instance_id"
+      "COLUMN_NAME": "instance_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "idx_tasks_instance_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "created_at"
+      "COLUMN_NAME": "created_at",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "idx_tasks_node",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "node_id"
+      "COLUMN_NAME": "node_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "idx_tasks_project_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "idx_tasks_project_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "created_at"
+      "COLUMN_NAME": "created_at",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "idx_tasks_project_created",
       "NON_UNIQUE": "1",
       "SEQ_IN_INDEX": "3",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_project_created_order",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_project_created_order",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "created_at",
+      "COLLATION": "D"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_project_created_order",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_project_status_updated",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_project_status_updated",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "status",
+      "COLLATION": "A"
+    },
+    {
+      "TABLE_NAME": "tasks",
+      "INDEX_NAME": "idx_tasks_project_status_updated",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "updated_at",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "uq_tasks_command",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "command_id"
+      "COLUMN_NAME": "command_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "uq_tasks_project_actor_key",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "project_id"
+      "COLUMN_NAME": "project_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "uq_tasks_project_actor_key",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "2",
-      "COLUMN_NAME": "actor_user_id"
+      "COLUMN_NAME": "actor_user_id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "tasks",
       "INDEX_NAME": "uq_tasks_project_actor_key",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "3",
-      "COLUMN_NAME": "idempotency_key"
+      "COLUMN_NAME": "idempotency_key",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "users",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "id"
+      "COLUMN_NAME": "id",
+      "COLLATION": "A"
     },
     {
       "TABLE_NAME": "users",
       "INDEX_NAME": "uq_users_issuer_subject_hash",
       "NON_UNIQUE": "0",
       "SEQ_IN_INDEX": "1",
-      "COLUMN_NAME": "identity_hash"
+      "COLUMN_NAME": "identity_hash",
+      "COLLATION": "A"
     }
   ],
   "foreignKeys": [
@@ -2608,6 +3186,13 @@
       "COLUMN_NAME": "instance_id",
       "CONSTRAINT_NAME": "fk_logs_instance",
       "REFERENCED_TABLE_NAME": "instances",
+      "REFERENCED_COLUMN_NAME": "id"
+    },
+    {
+      "TABLE_NAME": "monitor_alert_events",
+      "COLUMN_NAME": "alert_id",
+      "CONSTRAINT_NAME": "fk_monitor_event_alert",
+      "REFERENCED_TABLE_NAME": "monitor_alerts",
       "REFERENCED_COLUMN_NAME": "id"
     },
     {

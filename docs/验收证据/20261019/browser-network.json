@@ -1,0 +1,60 @@
+{
+  "startedAt": "2026-10-19T11:29:33.704Z",
+  "passed": true,
+  "actions": [
+    {
+      "id": "fd68d8cc-983d-48cc-8ff5-5f78177f6fdd",
+      "commandId": "45601bde-efaa-4340-ae98-aa3b0d216991",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "scenario": "BROWSER_RESPONSE_LOSS_AND_DOUBLE_CLICK"
+    },
+    {
+      "id": "674cf1eb-2c76-4a2e-929b-d969f3df1c9d",
+      "commandId": "91264c4c-364d-4813-87ee-86cb80222c90",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "eventCount": 5
+    }
+  ],
+  "checks": [
+    {
+      "name": "only explicitly allowed fixture is exposed",
+      "passed": true
+    },
+    {
+      "name": "response loss happened after durable server acceptance",
+      "passed": true
+    },
+    {
+      "name": "same-key reconciliation accepted",
+      "passed": true
+    },
+    {
+      "name": "reload preserves exact original idempotency key",
+      "passed": true
+    },
+    {
+      "name": "same-key duplicate returns the original task",
+      "passed": true
+    },
+    {
+      "name": "double click and response loss create exactly one task",
+      "passed": true
+    },
+    {
+      "name": "same-key reconciliation causes exactly one Agent delivery",
+      "passed": true
+    },
+    {
+      "name": "202 only acknowledges durable acceptance",
+      "passed": true
+    },
+    {
+      "name": "event timeline matches final state",
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "scope": "ISOLATED_REAL_DOCKER"
+}

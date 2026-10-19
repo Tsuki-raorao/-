@@ -118,16 +118,25 @@ public class V7__identity_projects extends BaseJavaMigration {
         else execute(c, "ALTER TABLE " + table + " ALTER COLUMN " + column + " SET NOT NULL");
     }
     private boolean hasColumn(Connection c, String table, String column) throws SQLException {
-        try (ResultSet r = c.getMetaData().getColumns(null, null, table, column)) { return r.next(); }
+        try (ResultSet r = c.getMetaData().getColumns(c.getCatalog(), c.getSchema(), metadataName(c,table), metadataName(c,column))) { return r.next(); }
     }
     private void addIndex(Connection c, String name, String table, String columns) throws SQLException { if (!hasIndex(c, table, name)) execute(c, "CREATE INDEX " + name + " ON " + table + "(" + columns + ")"); }
     private void addUnique(Connection c, String name, String table, String columns) throws SQLException { if (!hasIndex(c, table, name)) execute(c, "CREATE UNIQUE INDEX " + name + " ON " + table + "(" + columns + ")"); }
-    private boolean hasIndex(Connection c, String table, String name) throws SQLException { try (ResultSet r=c.getMetaData().getIndexInfo(null,null,table,false,false)) { while(r.next()) if(name.equalsIgnoreCase(r.getString("INDEX_NAME"))) return true; } return false; }
+    private boolean hasIndex(Connection c, String table, String name) throws SQLException { try (ResultSet r=c.getMetaData().getIndexInfo(c.getCatalog(),c.getSchema(),metadataName(c,table),false,false)) { while(r.next()) if(name.equalsIgnoreCase(r.getString("INDEX_NAME"))) return true; } return false; }
     private void addForeignKey(Connection c, String name, String table, String column, String parent, String parentColumn) throws SQLException { if (!hasForeignKey(c, table, name)) execute(c, "ALTER TABLE " + table + " ADD CONSTRAINT " + name + " FOREIGN KEY(" + column + ") REFERENCES " + parent + "(" + parentColumn + ")"); }
-    private boolean hasForeignKey(Connection c, String table, String name) throws SQLException { try (ResultSet r=c.getMetaData().getImportedKeys(null,null,table)) { while(r.next()) if(name.equalsIgnoreCase(r.getString("FK_NAME"))) return true; } return false; }
+    private boolean hasForeignKey(Connection c, String table, String name) throws SQLException { try (ResultSet r=c.getMetaData().getImportedKeys(c.getCatalog(),c.getSchema(),metadataName(c,table))) { while(r.next()) if(name.equalsIgnoreCase(r.getString("FK_NAME"))) return true; } return false; }
     private void dropUniqueIndexesOn(Connection c, String table, String column) throws SQLException {
+        if(!mysql) {
+            // H2 的 UNIQUE 约束拥有其 backing index，不能直接 DROP INDEX。
+            List<String> constraints=new ArrayList<>();
+            try(var q=c.prepareStatement("SELECT tc.CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE k ON k.CONSTRAINT_SCHEMA=tc.CONSTRAINT_SCHEMA AND k.CONSTRAINT_NAME=tc.CONSTRAINT_NAME WHERE tc.TABLE_SCHEMA=? AND tc.TABLE_NAME=? AND tc.CONSTRAINT_TYPE='UNIQUE' GROUP BY tc.CONSTRAINT_NAME HAVING COUNT(*)=1 AND MAX(k.COLUMN_NAME)=?")){
+                q.setString(1,c.getSchema());q.setString(2,metadataName(c,table));q.setString(3,metadataName(c,column));
+                try(var rows=q.executeQuery()){while(rows.next())constraints.add(rows.getString(1));}
+            }
+            for(String name:constraints)execute(c,"ALTER TABLE "+table+" DROP CONSTRAINT \""+name.replace("\"","\"\"")+"\"");
+        }
         Set<String> names = new LinkedHashSet<>();
-        try (ResultSet r=c.getMetaData().getIndexInfo(null,null,table,true,false)) {
+        try (ResultSet r=c.getMetaData().getIndexInfo(c.getCatalog(),c.getSchema(),metadataName(c,table),true,false)) {
             while(r.next()) { String name=r.getString("INDEX_NAME"), col=r.getString("COLUMN_NAME"); if(name!=null && col!=null && column.equalsIgnoreCase(col)) names.add(name); }
         }
         for(String name:names) {
@@ -141,5 +150,6 @@ public class V7__identity_projects extends BaseJavaMigration {
             if(!mysql) return "VARCHAR(64)"; p.setString(1,table); try(ResultSet r=p.executeQuery()) { if(!r.next()) throw new SQLException("missing parent id: "+table); String type=r.getString(1); long len=r.getLong(2); String cs=r.getString(3),co=r.getString(4); if(!type.matches("(?i)varchar|char")||len<1||len>65535||cs==null||co==null||!cs.matches("[A-Za-z0-9_]+")||!co.matches("[A-Za-z0-9_]+")) throw new SQLException("unsafe parent id metadata: "+table); return type+"("+len+") CHARACTER SET "+cs+" COLLATE "+co; }
         }
     }
+    private static String metadataName(Connection c,String value) throws SQLException { return c.getMetaData().storesUpperCaseIdentifiers()?value.toUpperCase(java.util.Locale.ROOT):value; }
     private static void execute(Connection c, String sql) throws SQLException { try(Statement s=c.createStatement()){s.execute(sql);} }
 }

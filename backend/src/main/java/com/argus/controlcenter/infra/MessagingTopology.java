@@ -28,9 +28,12 @@ public class MessagingTopology {
     @Bean Binding taskEventsDeadBinding() {
         return BindingBuilder.bind(taskEventsDeadQueue()).to(taskEventsDeadExchange()).with("failed");
     }
-    @Bean SimpleRabbitListenerContainerFactory taskEventListenerFactory(ConnectionFactory connectionFactory) {
+    @Bean SimpleRabbitListenerContainerFactory taskEventListenerFactory(ConnectionFactory connectionFactory,
+            @Value("${spring.rabbitmq.listener.simple.auto-startup:true}") boolean autoStartup) {
         var factory=new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
+        // This custom factory must explicitly honor Boot's operational pause setting.
+        factory.setAutoStartup(autoStartup);
         factory.setConcurrentConsumers(1); factory.setMaxConcurrentConsumers(2); factory.setPrefetchCount(10);
         factory.setDefaultRequeueRejected(false);
         factory.setAdviceChain(RetryInterceptorBuilder.stateless().maxAttempts(3).backOffOptions(250,2,1000)

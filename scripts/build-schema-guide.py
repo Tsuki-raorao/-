@@ -30,6 +30,9 @@ purposes = {
     "task_event_receipts": "已核实并持久消费的通知收件记录，以稳定事件标识去重。",
     "ai_diagnoses": "AI 只读诊断结果与证据索引，不保存模型密钥；AI 模块由另一会话负责。",
     "flyway_schema_history": "Flyway 自己维护的迁移历史，不手工修改来绕过校验。",
+    "monitor_alerts": "每个项目/规则/资源的一条当前告警状态，未知采样不自动解除活动告警。",
+    "monitor_alert_events": "仅在触发和恢复时追加记录，重复异常采样不刷屏。",
+    "monitor_samples": "按项目隔离的有限保留历史指标；NULL 表示不可确认，查询最多返回 500 点。",
 }
 meanings = {
     "id":"本表记录主键；跨表引用保持不变", "name":"可读名称，不作为唯一资源身份",
@@ -78,6 +81,14 @@ meanings = {
     "installed_rank":"迁移安装顺序", "description":"迁移说明", "type":"迁移实现类型", "script":"迁移脚本/类名",
     "checksum":"Flyway 校验和", "installed_by":"执行迁移的数据库用户", "installed_on":"迁移安装时间",
     "execution_time":"迁移执行耗时（毫秒）", "success":"迁移是否成功",
+    "rule_key":"告警规则标识，如 CPU_HIGH/NODE_OFFLINE", "resource_id":"该规则观测的资源标识，节点 ID 或 project/platform 范围",
+    "title":"告警可读名称", "severity":"严重程度 WARNING/CRITICAL", "observation_state":"KNOWN 或 UNKNOWN；和活动/恢复状态分开保存",
+    "observed_value":"最新可确认观测值；未知时 NULL", "threshold_value":"触发比较阈值，数值达到或超过时异常",
+    "summary":"本次评估/转换说明", "opened_at":"最近一次告警触发时间", "resolved_at":"有效正常采样确认恢复的时间",
+    "checked_at":"最近评估时间，页面据此标记评估过期", "episodes":"触发次数，只在新异常事件出现时递增",
+    "alert_id":"所属当前告警 ID", "metric_value":"本次监控观测值；NULL 为未知", "metric":"历史指标名称",
+    "source":"监控取值来源 HOST/MYSQL/RABBITMQ/DISABLED 等",
+    "state":"告警生命周期状态 ACTIVE/RESOLVED/UNKNOWN；事件表中保存本次触发或恢复状态",
 }
 
 tables = defaultdict(list)
@@ -91,7 +102,7 @@ for fk in data["foreignKeys"]:
     fks[fk["TABLE_NAME"]].append(fk)
 
 lines = ["# 02 数据库设计与字段字典", "",
-    "本表根据隔离 MySQL 实际迁移后的 information_schema 元数据生成，当前快照为 V1–V10。不是手工猜测 SQL，也不包含生产业务行或数据库密码。", "",
+    f"本表根据隔离 MySQL 实际迁移后的 information_schema 元数据生成，当前快照为 V1–V{data['migrations'][-1]['version']}。不是手工猜测 SQL，也不包含生产业务行或数据库密码。", "",
     "## 设计主线", "",
     "资源目录（nodes/instances）保存最近观测；tasks 保存操作事实；queue 仅管调度；events 追加历史；locks 限制同实例并发；resolutions 保存人工核对；outbox/receipts 管事件投递。身份表已有骨架，完整用户体系按需求后做。", "",
     "事务内保存同一业务事实，网络调用在事务外。外键保护资源引用；唯一键保证幂等；版本/租约决定谁能更新；索引改善访问路径。它们不能相互替代。", "",
@@ -106,17 +117,18 @@ for table, columns in tables.items():
         if name not in meanings:
             raise RuntimeError(f"Missing field meaning: {table}.{name}")
         default = col["COLUMN_DEFAULT"] if col["COLUMN_DEFAULT"] is not None else "无/NULL"
-        lines.append(f"| `{name}` | `{col['COLUMN_TYPE']}` | {col['IS_NULLABLE']} | `{default}` | {meanings[name]} |")
+        meaning = "监控服务评估并记录该点的时间，原始 Agent 采样新鲜度在写入前校验" if table == "monitor_samples" and name == "sampled_at" else meanings[name]
+        lines.append(f"| `{name}` | `{col['COLUMN_TYPE']}` | {col['IS_NULLABLE']} | `{default}` | {meaning} |")
     lines += ["", "**实际索引/约束：**", ""]
     for name, parts in indexes[table].items():
         kind = "唯一" if str(parts[0]["NON_UNIQUE"]) == "0" else "普通"
-        names = ", ".join(p["COLUMN_NAME"] for p in parts)
+        names = ", ".join(p["COLUMN_NAME"] + (" DESC" if p.get("COLLATION") == "D" else "") for p in parts)
         lines.append(f"- `{name}`（{kind}）：`{names}`。")
     for fk in fks[table]:
         lines.append(f"- 外键 `{fk['CONSTRAINT_NAME']}`：`{fk['COLUMN_NAME']}` → `{fk['REFERENCED_TABLE_NAME']}.{fk['REFERENCED_COLUMN_NAME']}`。")
     lines.append("")
 lines += ["## 为什么用迁移而不是直接改表", "",
-          "Flyway 根据已应用的版本顺序执行新迁移并校验旧记录。已经部署的 V1–V10 不能随意修改后重新上线，否则校验与旧实例可能不一致。新增功能用新版本迁移，MySQL DDL 不是整个迁移的事务回滚；发布前要在隔离副本演练并保留备份。", "",
+          "Flyway 根据已应用的版本顺序执行新迁移并校验旧记录。已发布迁移不能随意修改后重新执行；新增表和索引用新版本迁移。MySQL DDL 不是整个迁移的事务回滚，发布前要在隔离副本演练并保留备份。本轮修复 V7 的元数据 catalog/schema 限定，解决同一 MySQL 多数据库与 H2 大小写发现错误；此修复只影响尚未执行 V7 的安装，不会让已迁移生产库重新执行 V7。Java 迁移的默认 checksum 可为空，不能把校验通过当成所有迁移源码未变化的证明。", "",
           "## 面试追问", "",
           "- 为什么任务与队列分表？任务是长期事实，队列是可调度状态；历史查询不依赖队列是否还存在。",
           "- 唯一索引和幂等校验为什么都要？业务校验给稳定错误，数据库唯一约束兜住并发竞争。",

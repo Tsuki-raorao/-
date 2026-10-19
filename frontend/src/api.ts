@@ -3,6 +3,7 @@ import { normalizeCapabilities, type ActionIntent } from './task-control'
 import { normalizeResolution, normalizeResolutionEvents, normalizeReviewCapabilities, normalizeReviewEvidence, type ReviewIntent } from './task-resolution'
 import { authSession, normalizeAuthConfig, normalizeCsrf, normalizeIdentity, normalizeProjects } from './auth-session'
 import type { Task } from './models'
+import { monitoringSummary, monitoringHistory } from './monitoring'
 export type { Instance, NodeItem, Task, AgentLogs, HealthState } from './models'
 
 interface ApiEnvelope<T> { code?: number; message?: string; data?: T }
@@ -77,6 +78,8 @@ function list(value: unknown): unknown[] {
 }
 
 export const api = {
+  monitoring: async () => monitoringSummary(await request<unknown>('/monitoring/summary')),
+  monitoringHistory: async (resource: string, metric: string) => monitoringHistory(await request<unknown>(`/monitoring/history?resourceId=${encodeURIComponent(resource)}&metric=${encodeURIComponent(metric)}&limit=120`)),
   authConfig: async () => normalizeAuthConfig(await request<unknown>('/auth/config')),
   authMe: async () => normalizeIdentity(await request<unknown>('/auth/me')),
   authCsrf: async () => normalizeCsrf(await request<unknown>('/auth/csrf')),
