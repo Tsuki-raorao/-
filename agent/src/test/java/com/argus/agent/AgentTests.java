@@ -55,6 +55,22 @@ public final class AgentTests {
             equal(null, partial.cpuPercent()); equal(null, partial.memoryBytes()); equal(1024L, partial.memoryTotalBytes());
             equal("PARTIAL", partial.metricsStatus());
         });
+        test("Linux memory uses available including reclaimable cache", () -> {
+            HostMetrics value=HostMetrics.fromLinuxValues(.2,8192L*1024,"MemTotal: 8192 kB\nMemFree: 64 kB\nMemAvailable: 3072 kB\n");
+            equal(20d,value.cpuPercent());equal(5120L*1024,value.memoryBytes());equal(62.5,value.memoryPercent());
+        });
+        test("Linux missing invalid and overflow availability stays unknown", () -> {
+            for(String text:List.of("MemTotal: 8192 kB\n", "MemTotal: 8192 kB\nMemAvailable: 3 MB\n",
+                    "MemTotal: 8192 kB\nMemAvailable: 9000 kB\n", "MemTotal: 8192 kB\nMemAvailable: -1 kB\n",
+                    "MemTotal: 8192 kB\nMemAvailable: 9223372036854775807 kB\n", "MemTotal: 8192 kB\nMemAvailable: 1 kB\nMemAvailable: 2 kB\n")) {
+                HostMetrics value=HostMetrics.fromLinuxValues(.1,8192L*1024,text);
+                equal(null,value.memoryBytes());equal(8192L*1024,value.memoryTotalBytes());equal(10d,value.cpuPercent());
+            }
+        });
+        test("Linux host and container memory scopes cannot mix", () -> {
+            HostMetrics value=HostMetrics.fromLinuxValues(0,1024,"MemTotal: 8192 kB\nMemAvailable: 3072 kB\n");
+            equal(null,value.memoryBytes());equal(1024L,value.memoryTotalBytes());equal("PARTIAL",value.metricsStatus());
+        });
         test("JSON null nonfinite and control characters", () -> {
             String value = Json.object("missing", null, "nan", Double.NaN, "infinite", Float.POSITIVE_INFINITY,
                     "zero", 0, "text", "\b\f\u001b\u0000\n\r\t\\\"");
