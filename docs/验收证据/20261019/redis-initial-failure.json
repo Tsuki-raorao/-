@@ -1,0 +1,77 @@
+{
+  "scope": "ISOLATED_REAL_REDIS_MYSQL_DOCKER",
+  "passed": false,
+  "stages": [
+    {
+      "stage": "healthy",
+      "taskId": "8aa757fe-2f19-4dca-85c9-670a534b4d52",
+      "commandId": "b6daac4b-f5a9-45ca-b998-d1b9b7e2a555",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 1335.835,
+      "completionMs": 8163.741,
+      "events": 5,
+      "outbox": 5,
+      "cacheMatchesTerminal": true,
+      "ttlSeconds": 120
+    },
+    {
+      "stage": "healthy",
+      "taskId": "74819477-10ca-4292-9e5d-f616b56982f1",
+      "commandId": "7aef8fc9-6bea-455d-944e-58b3cf5060c2",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 37.628,
+      "completionMs": 13400.059,
+      "events": 5,
+      "outbox": 5,
+      "cacheMatchesTerminal": true,
+      "ttlSeconds": 119
+    },
+    {
+      "stage": "paused-timeout",
+      "taskId": "ebe2e81a-9654-42e7-917b-1521427afa66",
+      "commandId": "1cb6be6c-fb42-4574-8e56-e4c7a4939f1c",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 545.034,
+      "completionMs": 4240.442,
+      "events": 5,
+      "outbox": 5
+    },
+    {
+      "stage": "paused-timeout",
+      "taskId": "e4b501c9-4ce2-47bb-b7cd-cfcb55ecaa38",
+      "commandId": "53b66178-8371-4f8c-8bc0-d50e89258c6c",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 530.802,
+      "completionMs": 13332.701,
+      "events": 5,
+      "outbox": 5
+    },
+    {
+      "stage": "stopped-unavailable",
+      "taskId": "0389fff2-0bd3-47fb-8128-2f28e23de429",
+      "commandId": "31895011-7c0c-4fcd-bb73-2baccba99e78",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 531.443,
+      "completionMs": 4713.225,
+      "events": 5,
+      "outbox": 5
+    },
+    {
+      "stage": "stopped-unavailable",
+      "taskId": "7bfb08fd-e490-4222-b8a3-177f712a398a",
+      "commandId": "d5fab148-0b29-44d6-81bc-8c02fbff2b8e",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 527.231,
+      "completionMs": 14333.805,
+      "events": 5,
+      "outbox": 5
+    }
+  ],
+  "error": "successful hot-state missing"
+}

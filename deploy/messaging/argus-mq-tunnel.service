@@ -1,0 +1,20 @@
+[Unit]
+Description=Argus private AMQP SSH tunnel
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile=/etc/argus/messaging/tunnel.env
+ExecStart=/usr/bin/ssh -NT -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/etc/argus/messaging/known_hosts -i /etc/argus/messaging/tunnel_ed25519 -L 127.0.0.1:25674:127.0.0.1:25674 ubuntu@${ARGUS_MQ_TUNNEL_HOST}
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

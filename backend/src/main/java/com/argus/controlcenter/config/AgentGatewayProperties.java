@@ -29,6 +29,8 @@ public class AgentGatewayProperties {
     private String authToken = "";
     private Duration connectTimeout = Duration.ofSeconds(3);
     private Duration readTimeout = Duration.ofSeconds(5);
+    /** Bounded scheduled collection workers; independent from HTTP scheduler threads. */
+    private int syncConcurrency = 4;
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -48,4 +50,9 @@ public class AgentGatewayProperties {
     public void setConnectTimeout(Duration connectTimeout) { this.connectTimeout = connectTimeout; }
     public Duration getReadTimeout() { return readTimeout; }
     public void setReadTimeout(Duration readTimeout) { this.readTimeout = readTimeout; }
+    public int getSyncConcurrency() { return syncConcurrency; }
+    public void setSyncConcurrency(int value) {
+        if (value < 1 || value > 16) throw new IllegalArgumentException("syncConcurrency must be 1..16");
+        syncConcurrency = value;
+    }
 }

@@ -4,6 +4,11 @@ import com.argus.controlcenter.config.AgentGatewayProperties;
 import com.argus.controlcenter.domain.*;
 import com.argus.controlcenter.repository.NodeRepository;
 import java.time.Instant;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
+import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -15,22 +20,65 @@ public class AgentSnapshotSyncService {
     private final AgentGatewayProperties properties;
     private final AgentSnapshotStore store;
     private final AgentSnapshotParser parser = new AgentSnapshotParser();
+    private static final Logger log = LoggerFactory.getLogger(AgentSnapshotSyncService.class);
+    private final ExecutorService workers;
+    private final int concurrency;
+    private final ReentrantLock roundLock = new ReentrantLock();
+    private volatile boolean closing;
+    // Fixed stripes avoid an ever-growing map of deleted node identities.
+    private final ReentrantLock[] nodeLocks = new ReentrantLock[128];
 
     public AgentSnapshotSyncService(NodeRepository nodes, AgentGatewayService gateway,
                                     AgentGatewayProperties properties, AgentSnapshotStore store) {
         this.nodes = nodes; this.gateway = gateway; this.properties = properties; this.store = store;
+        concurrency = properties.getSyncConcurrency();
+        workers = new ThreadPoolExecutor(concurrency, concurrency, 0, TimeUnit.MILLISECONDS,
+                new ArrayBlockingQueue<>(concurrency), runnable -> {
+                    Thread thread = new Thread(runnable, "argus-node-sync"); thread.setDaemon(true); return thread;
+                }, new ThreadPoolExecutor.AbortPolicy());
+        for (int i=0;i<nodeLocks.length;i++) nodeLocks[i]=new ReentrantLock();
     }
 
     @Scheduled(initialDelayString = "${argus.agent.sync-initial-delay-ms:5000}",
             fixedDelayString = "${argus.agent.sync-interval-ms:60000}")
     public void syncAll() {
-        if (!properties.isEnabled() || !properties.isReadOnly()) return;
-        for (Node node : nodes.findAll()) syncNode(node.getId());
+        if (closing || !properties.isEnabled() || !properties.isReadOnly()) return;
+        if (!roundLock.tryLock()) return;
+        try {
+            var pending = nodes.findAll().iterator();
+            var completed = new ExecutorCompletionService<Void>(workers);
+            int inFlight = 0;
+            while (pending.hasNext() || inFlight > 0) {
+                while (pending.hasNext() && inFlight < concurrency) {
+                    String id = pending.next().getId();
+                    completed.submit(() -> { syncNode(id); return null; }); inFlight++;
+                }
+                if (inFlight > 0) {
+                    try { completed.take().get(); }
+                    catch (ExecutionException failed) {
+                        // Keep the rest of the round progressing; do not log remote response/secrets.
+                        log.warn("node collection failed: {}", failed.getCause().getClass().getSimpleName());
+                    }
+                    inFlight--;
+                }
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        } finally { roundLock.unlock(); }
     }
 
-    /** 当前单进程顺序采集；同一进程重复触发不能交叉覆盖采集时间。 */
-    public synchronized void syncNode(String nodeId) {
-        if (!properties.isEnabled() || !properties.isReadOnly()) return;
+    /** Different nodes may overlap; the same node never has concurrent snapshot writes. */
+    public void syncNode(String nodeId) {
+        if (closing || !properties.isEnabled() || !properties.isReadOnly()) return;
+        ReentrantLock lock=nodeLocks[Math.floorMod(nodeId.hashCode(),nodeLocks.length)];
+        try { lock.lockInterruptibly(); }
+        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); return; }
+        try { if (!closing) syncLocked(nodeId); } finally { lock.unlock(); }
+    }
+
+    @PreDestroy public void close() { closing=true; workers.shutdownNow(); }
+
+    private void syncLocked(String nodeId) {
         Node node = nodes.findById(nodeId).orElse(null);
         if (node == null) return;
         node.setLastCheckedAt(Instant.now());

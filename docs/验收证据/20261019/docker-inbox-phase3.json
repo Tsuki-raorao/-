@@ -1,0 +1,9 @@
+{
+  "scope": "ISOLATED_PHASE3_FINAL_DOCKER_INBOX",
+  "centralTasks": 35,
+  "inboxRecords": 35,
+  "allCommandsMatchInbox": true,
+  "gameBaselineUnchanged": true,
+  "unresolvedLocks": 0,
+  "fixtureStopped": true
+}

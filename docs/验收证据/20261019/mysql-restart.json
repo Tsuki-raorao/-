@@ -1,0 +1,24 @@
+{
+  "scope": "ISOLATED_MYSQL_PROCESS_RESTART_REAL_TASK_OUTBOX",
+  "passed": true,
+  "taskId": "4b49a7f9-4e88-459d-b672-ccf1e3e220e6",
+  "commandId": "17cb313a-7e2b-4dc8-8784-01e41017b488",
+  "beforeRestart": {
+    "taskStatus": "PENDING",
+    "queueRows": 1,
+    "pendingOutbox": 1,
+    "agentRecordExists": false
+  },
+  "mysqlRestartMs": 5349.749,
+  "afterRestart": {
+    "queueRows": 1,
+    "pendingOutbox": 1,
+    "taskStatus": "PENDING"
+  },
+  "finalTaskStatus": "SUCCEEDED",
+  "events": 5,
+  "publishedOutbox": 5,
+  "consumerReceipts": 5,
+  "inboxRecordCount": 1,
+  "cleanupTaskId": "dc671ba4-e077-4b01-9977-88c9b5150cd2"
+}

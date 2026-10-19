@@ -21,6 +21,6 @@ public class RedisTaskStateCache implements TaskStateCache {
     }
     @Override public void put(Task task) {
         try { redis.opsForValue().set(prefix+"task:"+task.getId(),json.writeValueAsString(task),ttl); }
-        catch (JsonProcessingException | RuntimeException ignored) { /* 回源 MySQL */ }
+        catch (JsonProcessingException | RuntimeException ignored) { /* Optional mirror; task reads already use MySQL. */ }
     }
 }

@@ -1,0 +1,44 @@
+{
+  "rounds" : [ {
+    "nodes" : 10,
+    "instancesPerNode" : 2,
+    "perEndpointDelayMs" : 250,
+    "roundMs" : 2382,
+    "successfulNodes" : 10,
+    "persistedInstances" : 20,
+    "httpRequests" : 20,
+    "peakConcurrentHttp" : 4,
+    "oldestFullSyncAgeMs" : 1452,
+    "oldestSampleAgeMs" : 1864,
+    "roundBudgetMs" : 30000,
+    "targetPassed" : true
+  }, {
+    "nodes" : 50,
+    "instancesPerNode" : 2,
+    "perEndpointDelayMs" : 250,
+    "roundMs" : 7697,
+    "successfulNodes" : 50,
+    "persistedInstances" : 100,
+    "httpRequests" : 100,
+    "peakConcurrentHttp" : 4,
+    "oldestFullSyncAgeMs" : 7124,
+    "oldestSampleAgeMs" : 7426,
+    "roundBudgetMs" : 30000,
+    "targetPassed" : true
+  }, {
+    "nodes" : 100,
+    "instancesPerNode" : 2,
+    "perEndpointDelayMs" : 250,
+    "roundMs" : 14801,
+    "successfulNodes" : 100,
+    "persistedInstances" : 200,
+    "httpRequests" : 200,
+    "peakConcurrentHttp" : 4,
+    "oldestFullSyncAgeMs" : 14234,
+    "oldestSampleAgeMs" : 14537,
+    "roundBudgetMs" : 30000,
+    "targetPassed" : true
+  } ],
+  "scope" : "ISOLATED_CLOUD_SIMULATED_AGENTS_REAL_COLLECTOR_MYSQL",
+  "label" : "after"
+}

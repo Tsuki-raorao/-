@@ -1,0 +1,114 @@
+{
+  "scope": "ISOLATED_REAL_REDIS_MYSQL_DOCKER",
+  "passed": true,
+  "stages": [
+    {
+      "stage": "healthy",
+      "taskId": "c7f59681-1ce6-45cd-9464-c7d47c7a3fed",
+      "commandId": "89e10a82-359c-4eba-8e86-edcedd1cb860",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 1306.246,
+      "completionMs": 8087.971,
+      "events": 5,
+      "outbox": 5,
+      "cacheMatchesTerminal": true,
+      "ttlSeconds": 119
+    },
+    {
+      "stage": "healthy",
+      "taskId": "ea9fd01a-1d36-4cd3-9743-6c35336c6d05",
+      "commandId": "5654304f-a35d-4fef-b81d-cc285fa52922",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 37.833,
+      "completionMs": 13398.183,
+      "events": 5,
+      "outbox": 5,
+      "cacheMatchesTerminal": true,
+      "ttlSeconds": 119
+    },
+    {
+      "stage": "paused-timeout",
+      "taskId": "db67ae13-6973-447b-bb67-02111140075b",
+      "commandId": "92e266ce-1405-4fcd-bcd8-9b281044499a",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 536.625,
+      "completionMs": 4232.539,
+      "events": 5,
+      "outbox": 5
+    },
+    {
+      "stage": "paused-timeout",
+      "taskId": "08bd8784-9a30-456d-9ce7-4438d6adb2e3",
+      "commandId": "e9ec5bbf-29ae-4ab3-b991-9095e80afe05",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 533.486,
+      "completionMs": 14373.547,
+      "events": 5,
+      "outbox": 5
+    },
+    {
+      "stage": "stopped-unavailable",
+      "taskId": "15d7317f-8022-4ae6-8997-b75439e1d34e",
+      "commandId": "8b0e93b8-55f8-4f76-8c07-052eb5a4626e",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 529.812,
+      "completionMs": 4716.409,
+      "events": 5,
+      "outbox": 5
+    },
+    {
+      "stage": "stopped-unavailable",
+      "taskId": "d6810a5b-bb26-42ce-83f2-538fa91b6e50",
+      "commandId": "aa04f3df-fc4f-4ccf-aa34-ec1d8cd0a640",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 528.983,
+      "completionMs": 14369.044,
+      "events": 5,
+      "outbox": 5
+    },
+    {
+      "stage": "recovered",
+      "taskId": "4f504bbb-2d4d-4f6f-8b3b-e6a9f93e3b5d",
+      "commandId": "cba91e11-6b3b-43f5-9c70-b45e4a4e6fdf",
+      "action": "START",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 28.6,
+      "completionMs": 3714.213,
+      "events": 5,
+      "outbox": 5,
+      "cacheMatchesTerminal": true,
+      "ttlSeconds": 119
+    },
+    {
+      "stage": "recovered",
+      "taskId": "14ff442d-6d52-4069-bce4-31fb8bb75341",
+      "commandId": "0d831dd2-63f3-40de-8646-10f5b45f66f0",
+      "action": "STOP",
+      "status": "SUCCEEDED",
+      "acceptanceMs": 30.238,
+      "completionMs": 13358.487,
+      "events": 5,
+      "outbox": 5,
+      "cacheMatchesTerminal": true,
+      "ttlSeconds": 119
+    }
+  ],
+  "preparationCleanup": {
+    "stage": "preparation-cleanup",
+    "taskId": "a209412c-9edb-413e-bf68-7abe61f3b91f",
+    "commandId": "e8e1b977-e5bd-4a38-ae55-47dba7b8116c",
+    "action": "STOP",
+    "status": "SUCCEEDED",
+    "acceptanceMs": 213.278,
+    "completionMs": 13597.486,
+    "events": 5,
+    "outbox": 5
+  },
+  "applicationReconnectWaitMs": 14502.308
+}

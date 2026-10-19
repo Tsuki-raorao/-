@@ -1,6 +1,11 @@
 server:
   port: 8080
 spring:
+  data:
+    redis:
+      # Hot-state writes run after commit; bound dependency failure latency.
+      connect-timeout: ${ARGUS_REDIS_CONNECT_TIMEOUT:500ms}
+      timeout: ${ARGUS_REDIS_COMMAND_TIMEOUT:500ms}
   rabbitmq:
     publisher-confirm-type: correlated
     publisher-returns: true
@@ -85,6 +90,7 @@ argus:
     read-timeout: ${ARGUS_AGENT_GATEWAY_READ_TIMEOUT:5s}
     sync-initial-delay-ms: ${ARGUS_AGENT_SYNC_INITIAL_DELAY_MS:5000}
     sync-interval-ms: ${ARGUS_AGENT_SYNC_INTERVAL_MS:60000}
+    sync-concurrency: ${ARGUS_AGENT_SYNC_CONCURRENCY:4}
   ai:
     enabled: ${ARGUS_AI_ENABLED:false}
     base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}

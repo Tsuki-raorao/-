@@ -1,0 +1,35 @@
+{
+  "scope": "PRODUCTION_MESSAGING_PREPARATION_ONLY",
+  "broker": {
+    "container": "argus-rabbitmq-prod",
+    "running": true,
+    "volume": "argus-rabbitmq-prod",
+    "hostname": "argus-mq",
+    "restartPolicy": "unless-stopped",
+    "amqpBoundToLoopback": true,
+    "managementPortPublished": false
+  },
+  "tunnelSystemdActive": true,
+  "persistentMessageConfirmedBeforeRestart": true,
+  "brokerActuallyRestarted": true,
+  "restartSmoke": {
+    "persistentMessageRecovered": true,
+    "readinessQueueRemoved": true,
+    "businessQueuesTouched": false
+  },
+  "applicationRuntimeBeforeSwitch": {
+    "serviceRunning": true,
+    "profile": "mysql",
+    "processEnvironmentToggles": {
+      "ARGUS_MQ_ENABLED": false,
+      "ARGUS_MONITORING_ENABLED": false,
+      "ARGUS_REDIS_ENABLED": true,
+      "ARGUS_AI_ENABLED": true,
+      "ARGUS_API_READ_ONLY": true,
+      "ARGUS_TASK_CONTROL_ENABLED": false,
+      "ARGUS_TASK_REVIEW_ENABLED": false
+    },
+    "newMessagingEnvironmentAttached": false
+  },
+  "productionApplicationSwitchCompleted": false
+}

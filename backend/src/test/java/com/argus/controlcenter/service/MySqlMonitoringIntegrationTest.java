@@ -45,12 +45,15 @@ class MySqlMonitoringIntegrationTest {
         var tx=new TransactionTemplate(new DataSourceTransactionManager(source));
         tx.executeWithoutResult(s->service.evaluate(now));
         assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id='mq-check-node' AND rule_key='CPU_HIGH'",String.class)).isEqualTo("ACTIVE");
+        assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id='mq-check-node' AND rule_key='MEMORY_HIGH'",String.class)).isEqualTo("ACTIVE");
         tx.executeWithoutResult(s->service.evaluate(now.plusSeconds(181)));
         assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id='mq-check-node' AND rule_key='CPU_HIGH'",String.class)).isEqualTo("ACTIVE");
         assertThat(jdbc.queryForObject("SELECT observation_state FROM monitor_alerts WHERE resource_id='mq-check-node' AND rule_key='CPU_HIGH'",String.class)).isEqualTo("UNKNOWN");
+        assertThat(jdbc.queryForObject("SELECT observation_state FROM monitor_alerts WHERE resource_id='mq-check-node' AND rule_key='MEMORY_HIGH'",String.class)).isEqualTo("UNKNOWN");
         node.setCpuPercent(2d);node.setMemoryBytes(100L);node.setLastSuccessfulSyncAt(now.plusSeconds(200));node.setSampledAt(now.plusSeconds(200));nodes.save(node);
         tx.executeWithoutResult(s->service.evaluate(now.plusSeconds(200)));
         assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id='mq-check-node' AND rule_key='CPU_HIGH'",String.class)).isEqualTo("RESOLVED");
+        assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id='mq-check-node' AND rule_key='MEMORY_HIGH'",String.class)).isEqualTo("RESOLVED");
         assertThat(store.history(IdentityConstants.LEGACY_PROJECT_ID,"mq-check-node","CPU_PERCENT",10)).hasSizeGreaterThanOrEqualTo(3);
         assertThat(store.history("another-project","mq-check-node","CPU_PERCENT",10)).isEmpty();
     }

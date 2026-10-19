@@ -1,0 +1,85 @@
+{
+  "afterVersion" : "12",
+  "migrationsExecuted" : 3,
+  "businessTables" : {
+    "ai_diagnoses" : {
+      "sha256" : "118429284efcac353a673befa0140a3cb2700b54def1b8ddcf6ce59629701f05",
+      "rows" : 3
+    },
+    "identity_config_gate" : {
+      "sha256" : "fd9ccb6f36e749a4ba3cd69e48489576360cc5914dace9cfc9a6bd075cc82ad2",
+      "rows" : 1
+    },
+    "instance_task_locks" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "instances" : {
+      "sha256" : "8c456b70dd63bf4f52e72e9862acf815deecd00c6a5e11ae093d833579a7046f",
+      "rows" : 14
+    },
+    "logs" : {
+      "sha256" : "1b65dba57fe32b4eae6cc18e586af013a0dc52b6ea1ca814881f742ab2dba448",
+      "rows" : 1
+    },
+    "nodes" : {
+      "sha256" : "cd138b3a3cc3d2fd5113cee1d3076fb8b9d9e5e23d191c00f07dd796b857827f",
+      "rows" : 3
+    },
+    "project_members" : {
+      "sha256" : "f785033e2a05baa40d61dc11f04cbea5fd13e0f5a1013b5c9fa1084b23b8de18",
+      "rows" : 1
+    },
+    "projects" : {
+      "sha256" : "f747a89d638ed542f2a04bd987743382f1ba4ac64dd9029b42ad39f70bb6149f",
+      "rows" : 1
+    },
+    "resolution_authorizations" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "review_dispatch_permits" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "task_dispatch_permits" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "task_event_outbox" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "task_events" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "task_queue" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "task_resolution_events" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "task_resolution_queue" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "task_resolutions" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "tasks" : {
+      "sha256" : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows" : 0
+    },
+    "users" : {
+      "sha256" : "7a8ac57f902b4d36fd92dc8ef08c211438cd89684daae292cb1841aeb25aecb9",
+      "rows" : 1
+    }
+  },
+  "allExistingBusinessRowsUnchanged" : true,
+  "scope" : "ISOLATED_RESTORED_PRODUCTION_COPY",
+  "beforeVersion" : "9"
+}

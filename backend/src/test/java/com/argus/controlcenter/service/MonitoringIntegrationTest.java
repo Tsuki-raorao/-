@@ -24,6 +24,7 @@ class MonitoringIntegrationTest {
     @Autowired NodeRepository nodes;
     @Autowired JdbcTemplate jdbc;
     @Autowired MockMvc http;
+    @Autowired com.argus.controlcenter.infra.TaskEventOutboxRepository outbox;
     private final String project=IdentityConstants.LEGACY_PROJECT_ID;
 
     @Test void monitoringEndpointsEnforceAuthenticationProjectAndMetricScope() throws Exception {
@@ -59,14 +60,17 @@ class MonitoringIntegrationTest {
         node.setSampledAt(now);node.setLastSuccessfulSyncAt(now);nodes.save(node);
         monitor.evaluate(now);
         assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id=? AND rule_key='CPU_HIGH'",String.class,resource)).isEqualTo("ACTIVE");
+        assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id=? AND rule_key='MEMORY_HIGH'",String.class,resource)).isEqualTo("ACTIVE");
         monitor.evaluate(now.plusSeconds(181));
         assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id=? AND rule_key='NODE_OFFLINE'",String.class,resource)).isEqualTo("ACTIVE");
         assertThat(jdbc.queryForObject("SELECT observation_state FROM monitor_alerts WHERE resource_id=? AND rule_key='CPU_HIGH'",String.class,resource)).isEqualTo("UNKNOWN");
+        assertThat(jdbc.queryForObject("SELECT observation_state FROM monitor_alerts WHERE resource_id=? AND rule_key='MEMORY_HIGH'",String.class,resource)).isEqualTo("UNKNOWN");
         assertThat(store.history("other-project",resource,"CPU_PERCENT",10)).isEmpty();
         assertThat(store.history(project,resource,"CPU_PERCENT",10)).hasSize(2);
         node.setCpuPercent(1d);node.setMemoryBytes(100L);node.setSampledAt(now.plusSeconds(200));node.setLastSuccessfulSyncAt(now.plusSeconds(200));nodes.save(node);
         monitor.evaluate(now.plusSeconds(200));
         assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id=? AND rule_key='CPU_HIGH'",String.class,resource)).isEqualTo("RESOLVED");
+        assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id=? AND rule_key='MEMORY_HIGH'",String.class,resource)).isEqualTo("RESOLVED");
         assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE resource_id=? AND rule_key='NODE_OFFLINE'",String.class,resource)).isEqualTo("RESOLVED");
     }
 
@@ -78,5 +82,22 @@ class MonitoringIntegrationTest {
         store.sample(project,"old-sample","CPU_PERCENT",1d,"HOST",now.minusSeconds(8*86400));
         store.prune(now.minusSeconds(7*86400));
         assertThat(store.history(project,"old-sample","CPU_PERCENT",10)).isEmpty();
+    }
+
+    @Test @org.springframework.transaction.annotation.Transactional
+    void taskWindowAndOutboxAgeTriggerThenRecoverWithoutChangingTaskFact() {
+        Instant now=Instant.now();String nodeId="event-monitor-node",instance="event-monitor-instance",task="event-monitor-task";
+        var node=new Node(nodeId,"Event monitor fixture","127.0.0.1",NodeStatus.UNKNOWN,null);node.setProjectId(project);nodes.save(node);
+        jdbc.update("INSERT INTO instances(id,name,node_id,container_name,agent_instance_id,version,status,updated_at,project_id) VALUES(?,?,?,'fixture','fixture','test','STOPPED',?,?)",instance,"Event fixture",nodeId,java.sql.Timestamp.from(now),project);
+        jdbc.update("INSERT INTO tasks(id,instance_id,action,status,created_at,updated_at,project_id,actor_user_id,auth_mode) VALUES(?,?,'START','FAILED',?,?,?,?,'LEGACY_TOKEN')",task,instance,java.sql.Timestamp.from(now),java.sql.Timestamp.from(now),project,IdentityConstants.LEGACY_USER_ID);
+        outbox.append(task,1,null,TaskStatus.FAILED,"test","VALIDATION",now.minusSeconds(120));
+        monitor.evaluate(now);
+        for(String rule:java.util.List.of("TASK_FAILURES","OUTBOX_BACKLOG"))
+            assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE project_id=? AND rule_key=? AND resource_id='project'",String.class,project,rule)).isEqualTo("ACTIVE");
+        jdbc.update("UPDATE task_event_outbox SET status='PUBLISHED',published_at=? WHERE task_id=?",java.sql.Timestamp.from(now),task);
+        monitor.evaluate(now.plusSeconds(301));
+        for(String rule:java.util.List.of("TASK_FAILURES","OUTBOX_BACKLOG"))
+            assertThat(jdbc.queryForObject("SELECT state FROM monitor_alerts WHERE project_id=? AND rule_key=? AND resource_id='project'",String.class,project,rule)).isEqualTo("RESOLVED");
+        assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE id=?",String.class,task)).isEqualTo("FAILED");
     }
 }
