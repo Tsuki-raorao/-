@@ -1,0 +1,79 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "homepage fits 1440",
+      "passed": true
+    },
+    {
+      "name": "live inventory 1440",
+      "passed": true
+    },
+    {
+      "name": "search filters exact live instance 1440",
+      "passed": true
+    },
+    {
+      "name": "selection updates detail 1440",
+      "passed": true
+    },
+    {
+      "name": "empty search has no stale target 1440",
+      "passed": true
+    },
+    {
+      "name": "console fits 1440",
+      "passed": true
+    },
+    {
+      "name": "detail opens logs 1440",
+      "passed": true
+    },
+    {
+      "name": "existing confirmation preserved 1440",
+      "passed": true
+    },
+    {
+      "name": "homepage fits 390",
+      "passed": true
+    },
+    {
+      "name": "live inventory 390",
+      "passed": true
+    },
+    {
+      "name": "search filters exact live instance 390",
+      "passed": true
+    },
+    {
+      "name": "selection updates detail 390",
+      "passed": true
+    },
+    {
+      "name": "empty search has no stale target 390",
+      "passed": true
+    },
+    {
+      "name": "console fits 390",
+      "passed": true
+    },
+    {
+      "name": "detail opens logs 390",
+      "passed": true
+    },
+    {
+      "name": "existing confirmation preserved 390",
+      "passed": true
+    },
+    {
+      "name": "no production actions sent",
+      "passed": true
+    },
+    {
+      "name": "no runtime errors",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "writes": []
+}

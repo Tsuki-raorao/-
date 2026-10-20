@@ -2,8 +2,8 @@
 import type { Instance, NodeItem, TaskAction } from '../models'
 import { actionLabel, bytes, instanceQuality, metricsLabel, missingMetric, percent, sourceLabel, timeLabel } from '../models'
 
-const props = defineProps<{ items: Instance[]; nodes: NodeItem[]; now: number; actionReason: (item: Instance, action: TaskAction) => string; blockingTask: (item: Instance) => string }>()
-const emit = defineEmits<{ control: [action: TaskAction, instance: Instance]; showTask: [id: string] }>()
+const props = defineProps<{ items: Instance[]; nodes: NodeItem[]; now: number; actionReason: (item: Instance, action: TaskAction) => string; blockingTask: (item: Instance) => string; compact?: boolean; selectedId?: string }>()
+const emit = defineEmits<{ control: [action: TaskAction, instance: Instance]; showTask: [id: string]; select: [id: string] }>()
 const actions: TaskAction[] = ['START', 'STOP', 'RESTART']
 const parent = (item: Instance) => props.nodes.find(node => node.id === item.nodeId)
 const quality = (item: Instance) => instanceQuality(item, parent(item), props.now)
@@ -11,11 +11,11 @@ const statusLabel = (status: Instance['status']) => ({ running: '运行中', sto
 </script>
 
 <template>
-  <div class="instance-table">
-    <div class="table-header"><span>实例 / 中央 ID</span><span>所属节点</span><span>观测状态</span><span>资源与来源</span><span>采集时间</span><span>受控操作</span></div>
-    <div v-if="!items.length" class="empty-state">暂无实例数据</div>
-    <div v-for="item in items" :key="item.id" class="table-row" :data-instance-id="item.id">
-      <div class="instance-name"><span class="cube">▣</span><div><strong>{{ item.name }}</strong><small>{{ item.agentInstanceId || '未报告容器标识' }} · {{ item.image }}</small><small class="identifier" :title="item.id">ID：{{ item.id || '缺少中央标识' }}</small></div></div>
+  <div class="instance-table" :class="{ 'compact-instances': compact }">
+    <div class="table-header"><span>{{ compact ? '实例名称' : '实例 / 中央 ID' }}</span><span>所属节点</span><span>观测状态</span><span>资源与来源</span><span>采集时间</span><span>受控操作</span></div>
+    <div v-if="!items.length && !compact" class="empty-state">暂无实例数据</div>
+    <div v-for="item in items" :key="item.id" class="table-row" :data-instance-id="item.id" :class="{ selected: compact && selectedId === item.id }">
+      <div class="instance-name"><span class="cube">▣</span><div><button v-if="compact" class="instance-select" :aria-pressed="selectedId === item.id" :aria-label="`查看 ${item.name} 详情`" @click="emit('select', item.id)">{{ item.name }}</button><strong v-else>{{ item.name }}</strong><small>{{ item.agentInstanceId || '未报告容器标识' }} · {{ item.image }}</small><small class="identifier" :title="item.id">ID：{{ item.id || '缺少中央标识' }}</small></div></div>
       <div class="node-name"><span>{{ parent(item)?.name || item.node }}</span><small class="identifier">{{ item.nodeId || '未关联节点' }}</small></div>
       <div class="observed-state"><span class="status-pill" :class="item.status"><i></i>{{ statusLabel(item.status) }}</span><span :class="['snapshot-badge', quality(item).state]" :title="quality(item).detail">{{ quality(item).label }}</span></div>
       <div class="resource-values"><b>{{ bytes(item.memoryBytes, item.metricsStatus) }}</b><small>CPU {{ percent(item.cpuPercent, item.metricsStatus) }}</small><small>玩家：{{ item.players === null ? missingMetric(item.metricsStatus) : `${item.players} 人` }}</small><small :class="{ 'mock-text': item.dataSource === 'MOCK' }">{{ sourceLabel(item.dataSource) }} · {{ metricsLabel(item.metricsStatus) }}</small></div>

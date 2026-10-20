@@ -1,0 +1,12 @@
+{
+  "scope": "FRONTEND_BRAND_STATIC_RELEASE",
+  "passed": true,
+  "indexSha256": "f260204c3a41da7e3ff67bdfc133aeb6b18d01213c749c512e63835c8d30511e",
+  "archiveSha256": "8ff3bd2f85f27da111d4d2544b23de2cbd145db572dad67d4e9878d87ab7ed71",
+  "oldAssetsRetained": true,
+  "portsVerified": [
+    80,
+    9090
+  ],
+  "publishedAt": "2026-10-20T06:46:14.657598+00:00"
+}

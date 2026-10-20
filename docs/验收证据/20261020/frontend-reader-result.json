@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "checks": [
+    "reader access label remains read-only",
+    "all reader actions disabled",
+    "node filter matches selected node",
+    "status filter applies with node filter"
+  ],
+  "writes": []
+}
