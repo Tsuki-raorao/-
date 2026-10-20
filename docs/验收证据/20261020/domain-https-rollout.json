@@ -1,0 +1,36 @@
+{
+  "scope": "ARGUS_DOMAIN_HTTPS_ROLLOUT",
+  "passed": true,
+  "checks": [
+    {
+      "name": "other virtual-host files unchanged",
+      "passed": true
+    },
+    {
+      "name": "existing IP TLS certificate preserved",
+      "passed": true
+    },
+    {
+      "name": "HTTP domain redirect <APEX_DOMAIN>",
+      "passed": true
+    },
+    {
+      "name": "HTTP domain redirect <WWW_DOMAIN>",
+      "passed": true
+    },
+    {
+      "name": "IP health retained 80",
+      "passed": true
+    },
+    {
+      "name": "IP health retained 9090",
+      "passed": true
+    },
+    {
+      "name": "dedicated renewal timer active",
+      "passed": true
+    }
+  ],
+  "certificateNotAfter": "Jan 18 06:02:40 2027 GMT",
+  "checkedAt": "2026-10-20T07:02:11.902658+00:00"
+}

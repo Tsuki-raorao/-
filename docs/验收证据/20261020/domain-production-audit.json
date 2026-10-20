@@ -1,0 +1,167 @@
+{
+  "scope": "PRODUCTION_OPERATIONS_FINAL_AUDIT",
+  "passed": true,
+  "checks": [
+    {
+      "name": "three original environment files unchanged",
+      "passed": true
+    },
+    {
+      "name": "running artifact matches verified candidate",
+      "passed": true
+    },
+    {
+      "name": "MQ and monitoring enabled in running process",
+      "passed": true
+    },
+    {
+      "name": "authenticated operations and independent operator enabled",
+      "passed": true
+    },
+    {
+      "name": "nine explicit business/test targets enabled",
+      "passed": true
+    },
+    {
+      "name": "existing reader has no operation capability",
+      "passed": true
+    },
+    {
+      "name": "existing AI and Redis toggles preserved",
+      "passed": true
+    },
+    {
+      "name": "production schema V12 with no failed migration",
+      "passed": true
+    },
+    {
+      "name": "task_queue has no unresolved work",
+      "passed": true
+    },
+    {
+      "name": "task_resolution_queue has no unresolved work",
+      "passed": true
+    },
+    {
+      "name": "instance_task_locks has no unresolved work",
+      "passed": true
+    },
+    {
+      "name": "all temporary production MQ facts cleaned",
+      "passed": true
+    },
+    {
+      "name": "real control and workload nodes present",
+      "passed": true
+    },
+    {
+      "name": "real node snapshot fresh 13db1b3a-3c57-43cd-a98c-490a26fb1be8",
+      "passed": true
+    },
+    {
+      "name": "Agent control and review enabled 13db1b3a-3c57-43cd-a98c-490a26fb1be8",
+      "passed": true
+    },
+    {
+      "name": "real node snapshot fresh 800ddf2d-4bf4-46c2-83f6-a057bb953faa",
+      "passed": true
+    },
+    {
+      "name": "Agent control and review enabled 800ddf2d-4bf4-46c2-83f6-a057bb953faa",
+      "passed": true
+    },
+    {
+      "name": "all seven monitoring rules evaluated",
+      "passed": true
+    },
+    {
+      "name": "static entry 80 serves candidate index",
+      "passed": true
+    },
+    {
+      "name": "static entry 9090 serves candidate index",
+      "passed": true
+    },
+    {
+      "name": "production queues clean and consumer connected",
+      "passed": true
+    },
+    {
+      "name": "persistent SSH tunnel active",
+      "passed": true
+    }
+  ],
+  "database": {
+    "version": "12",
+    "userTasks": 3,
+    "pendingOutbox": 0
+  },
+  "inventory": {
+    "realHostNodes": [
+      {
+        "nodeId": "13db1b3a-3c57-43cd-a98c-490a26fb1be8",
+        "status": "ONLINE",
+        "source": "HOST",
+        "snapshotAgeSeconds": 36.271,
+        "memoryPercent": 43.94109399744817
+      },
+      {
+        "nodeId": "800ddf2d-4bf4-46c2-83f6-a057bb953faa",
+        "status": "ONLINE",
+        "source": "HOST",
+        "snapshotAgeSeconds": 36.295,
+        "memoryPercent": 57.42971381928554
+      }
+    ],
+    "legacyMockNodes": 1,
+    "instances": 14
+  },
+  "monitoring": {
+    "ruleKeys": [
+      "CPU_HIGH",
+      "MEMORY_HIGH",
+      "MQ_DEAD_LETTERS",
+      "MQ_QUEUE_BACKLOG",
+      "NODE_OFFLINE",
+      "OUTBOX_BACKLOG",
+      "TASK_FAILURES"
+    ],
+    "activeRules": [],
+    "memoryAlerts": [
+      {
+        "resource_id": "13db1b3a-3c57-43cd-a98c-490a26fb1be8",
+        "state": "RESOLVED",
+        "observation_state": "KNOWN",
+        "observed_value": 43.94109399744817,
+        "threshold_value": 90.0,
+        "checked_at": "2026-10-20T07:06:20.280+00:00"
+      },
+      {
+        "resource_id": "800ddf2d-4bf4-46c2-83f6-a057bb953faa",
+        "state": "RESOLVED",
+        "observation_state": "KNOWN",
+        "observed_value": 57.42971381928554,
+        "threshold_value": 90.0,
+        "checked_at": "2026-10-20T07:06:20.280+00:00"
+      }
+    ]
+  },
+  "sourceCommit": "a65d3dffcfbf946a8c447b588fb5b96ca134131a",
+  "artifactSha256": "2359a1751bd451565340047ac445287f1e263c047862a7418c1baff5640b39be",
+  "gray": {
+    "scope": "PRODUCTION_CONTROLLED_SYNTHETIC_MQ_FACT",
+    "outboxStatus": "PUBLISHED",
+    "receiptCount": 1,
+    "taskQueueRows": 0,
+    "agentCommandCreated": false,
+    "temporaryFactsCleaned": true
+  },
+  "queue": {
+    "ready": 0,
+    "consumers": 1,
+    "dead": 0
+  },
+  "staticIndexSha256": "459d51a3492c28f9d06847d9a9ea36cc7ed5e303a1e484897e00e149d6e23921",
+  "writeGuardStatus": 403,
+  "checkedAt": "2026-10-20T07:06:20.748544+00:00"
+}

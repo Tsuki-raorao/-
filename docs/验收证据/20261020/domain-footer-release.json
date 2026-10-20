@@ -1,0 +1,12 @@
+{
+  "scope": "DOMAIN_ICP_STATIC_RELEASE",
+  "passed": true,
+  "indexSha256": "459d51a3492c28f9d06847d9a9ea36cc7ed5e303a1e484897e00e149d6e23921",
+  "previousIndexSha256": "f260204c3a41da7e3ff67bdfc133aeb6b18d01213c749c512e63835c8d30511e",
+  "publishedEntries": [
+    "index.html",
+    "assets/index--eImKNQq.css",
+    "assets/index-C5BMmDk_.js"
+  ],
+  "oldAssetsRetained": true
+}

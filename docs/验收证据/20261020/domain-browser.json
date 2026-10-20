@@ -1,0 +1,160 @@
+{
+  "scope": "DOMAIN_HTTPS_ICP_BROWSER",
+  "passed": true,
+  "checks": [
+    {
+      "name": "browser HTTP redirects to trusted HTTPS apex 1440",
+      "passed": true
+    },
+    {
+      "name": "homepage ICP and official link apex 1440",
+      "passed": true
+    },
+    {
+      "name": "homepage logo apex 1440",
+      "passed": true
+    },
+    {
+      "name": "homepage fits viewport apex 1440",
+      "passed": true
+    },
+    {
+      "name": "HTTPS console backend and operations mode apex 1440",
+      "passed": true
+    },
+    {
+      "name": "console ICP footer apex 1440",
+      "passed": true
+    },
+    {
+      "name": "HTTPS authenticated operation permissions apex 1440",
+      "passed": true
+    },
+    {
+      "name": "operation confirmation usable; canceled before any command apex 1440",
+      "passed": true
+    },
+    {
+      "name": "monitoring page over HTTPS apex 1440",
+      "passed": true
+    },
+    {
+      "name": "browser HTTP redirects to trusted HTTPS apex 390",
+      "passed": true
+    },
+    {
+      "name": "homepage ICP and official link apex 390",
+      "passed": true
+    },
+    {
+      "name": "homepage logo apex 390",
+      "passed": true
+    },
+    {
+      "name": "homepage fits viewport apex 390",
+      "passed": true
+    },
+    {
+      "name": "HTTPS console backend and operations mode apex 390",
+      "passed": true
+    },
+    {
+      "name": "console ICP footer apex 390",
+      "passed": true
+    },
+    {
+      "name": "HTTPS authenticated operation permissions apex 390",
+      "passed": true
+    },
+    {
+      "name": "operation confirmation usable; canceled before any command apex 390",
+      "passed": true
+    },
+    {
+      "name": "monitoring page over HTTPS apex 390",
+      "passed": true
+    },
+    {
+      "name": "browser HTTP redirects to trusted HTTPS www 1440",
+      "passed": true
+    },
+    {
+      "name": "homepage ICP and official link www 1440",
+      "passed": true
+    },
+    {
+      "name": "homepage logo www 1440",
+      "passed": true
+    },
+    {
+      "name": "homepage fits viewport www 1440",
+      "passed": true
+    },
+    {
+      "name": "HTTPS console backend and operations mode www 1440",
+      "passed": true
+    },
+    {
+      "name": "console ICP footer www 1440",
+      "passed": true
+    },
+    {
+      "name": "HTTPS authenticated operation permissions www 1440",
+      "passed": true
+    },
+    {
+      "name": "operation confirmation usable; canceled before any command www 1440",
+      "passed": true
+    },
+    {
+      "name": "monitoring page over HTTPS www 1440",
+      "passed": true
+    },
+    {
+      "name": "browser HTTP redirects to trusted HTTPS www 390",
+      "passed": true
+    },
+    {
+      "name": "homepage ICP and official link www 390",
+      "passed": true
+    },
+    {
+      "name": "homepage logo www 390",
+      "passed": true
+    },
+    {
+      "name": "homepage fits viewport www 390",
+      "passed": true
+    },
+    {
+      "name": "HTTPS console backend and operations mode www 390",
+      "passed": true
+    },
+    {
+      "name": "console ICP footer www 390",
+      "passed": true
+    },
+    {
+      "name": "HTTPS authenticated operation permissions www 390",
+      "passed": true
+    },
+    {
+      "name": "operation confirmation usable; canceled before any command www 390",
+      "passed": true
+    },
+    {
+      "name": "monitoring page over HTTPS www 390",
+      "passed": true
+    },
+    {
+      "name": "no browser runtime exceptions",
+      "passed": true
+    },
+    {
+      "name": "browser audit submitted no service actions",
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "unexpectedWrites": []
+}

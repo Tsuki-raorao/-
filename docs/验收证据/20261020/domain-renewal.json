@@ -1,0 +1,10 @@
+{
+  "scope": "DOMAIN_CERTIFICATE_RENEWAL",
+  "passed": true,
+  "certbotVersion": "5.8.0",
+  "dryRunWithDeployHookPassed": true,
+  "timerEnabledAndActive": true,
+  "scheduleUTC": "02:15 and 14:15, randomized delay up to 1 hour",
+  "certificateExpiresUTC": "2027-01-18T06:02:40Z",
+  "existingRelayTimerUnchanged": true
+}

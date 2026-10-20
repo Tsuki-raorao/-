@@ -1,0 +1,60 @@
+{
+  "scope": "PUBLIC_DOMAIN_TLS_CHECK",
+  "passed": true,
+  "checks": [
+    {
+      "name": "trusted matching certificate <APEX_DOMAIN>",
+      "passed": true
+    },
+    {
+      "name": "HTTPS <APEX_DOMAIN>/",
+      "passed": true
+    },
+    {
+      "name": "HTTPS <APEX_DOMAIN>/api/health",
+      "passed": true
+    },
+    {
+      "name": "operations still enabled <APEX_DOMAIN>",
+      "passed": true
+    },
+    {
+      "name": "HTTP preserves request path/query <APEX_DOMAIN>",
+      "passed": true
+    },
+    {
+      "name": "trusted matching certificate <WWW_DOMAIN>",
+      "passed": true
+    },
+    {
+      "name": "HTTPS <WWW_DOMAIN>/",
+      "passed": true
+    },
+    {
+      "name": "HTTPS <WWW_DOMAIN>/api/health",
+      "passed": true
+    },
+    {
+      "name": "operations still enabled <WWW_DOMAIN>",
+      "passed": true
+    },
+    {
+      "name": "HTTP preserves request path/query <WWW_DOMAIN>",
+      "passed": true
+    }
+  ],
+  "certificates": [
+    {
+      "host": "<APEX_DOMAIN>",
+      "protocol": "TLSv1.3",
+      "expires": "Jan 18 06:02:40 2027 GMT",
+      "sha256": "9fe3308b2fe591fb1a709692bd953a2d96f7b0d4ebc66638f0f815d0b8687a92"
+    },
+    {
+      "host": "<WWW_DOMAIN>",
+      "protocol": "TLSv1.3",
+      "expires": "Jan 18 06:02:40 2027 GMT",
+      "sha256": "9fe3308b2fe591fb1a709692bd953a2d96f7b0d4ebc66638f0f815d0b8687a92"
+    }
+  ]
+}
