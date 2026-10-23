@@ -37,5 +37,24 @@ public class AiAgentRepository {
     public void step(String run,int seq,String phase,String status,String input,String output,String error){
         Instant now=Instant.now(); jdbc.update("INSERT INTO ai_agent_steps(id,run_id,sequence_no,phase,status,input_json,output_json,error_code,started_at,finished_at) VALUES(?,?,?,?,?,?,?,?,?,?)",UUID.randomUUID().toString(),run,seq,phase,status,input,output,error,Timestamp.from(now),Timestamp.from(now));
     }
+    public int nextStepSequence(String runId){
+        Integer next=jdbc.queryForObject("SELECT COALESCE(MAX(sequence_no),0)+1 FROM ai_agent_steps WHERE run_id=?",Integer.class,runId);
+        return next==null?1:next;
+    }
+    /** 将进程崩溃后遗留的 RUNNING 运行标记为可恢复，避免永久占用运行配额。 */
+    public int recoverStaleRuns(Instant cutoff){
+        List<String> ids=jdbc.query("SELECT id FROM ai_agent_runs WHERE status='RUNNING' AND updated_at<?",
+                (rs,n)->rs.getString("id"),Timestamp.from(cutoff));
+        int recovered=0;
+        for(String id:ids){
+            int updated=jdbc.update("UPDATE ai_agent_runs SET status='RECOVERY_REQUIRED',phase='RECOVERY',error_code='AI_RUN_INTERRUPTED',updated_at=?,version_no=version_no+1 WHERE id=? AND status='RUNNING'",
+                    Timestamp.from(Instant.now()),id);
+            if(updated==1){
+                step(id,nextStepSequence(id),"RECOVERY","RECOVERY_REQUIRED","scheduler",null,"AI_RUN_INTERRUPTED");
+                recovered++;
+            }
+        }
+        return recovered;
+    }
     private AiAgentRun mapRun(java.sql.ResultSet rs,int n)throws java.sql.SQLException{AiAgentRun r=new AiAgentRun();r.setId(rs.getString("id"));r.setSessionId(rs.getString("session_id"));r.setProjectId(rs.getString("project_id"));r.setActorUserId(rs.getString("actor_user_id"));r.setQuestion(rs.getString("question"));r.setStatus(rs.getString("status"));r.setPhase(rs.getString("phase"));r.setAnswer(rs.getString("answer"));r.setEvidenceJson(rs.getString("evidence_json"));r.setActionPlanJson(rs.getString("action_plan_json"));r.setErrorCode(rs.getString("error_code"));r.setTaskId(rs.getString("task_id"));r.setCreatedAt(rs.getTimestamp("created_at").toInstant());r.setUpdatedAt(rs.getTimestamp("updated_at").toInstant());r.setVersionNo(rs.getLong("version_no"));return r;}
 }

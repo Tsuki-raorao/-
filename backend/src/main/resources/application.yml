@@ -98,3 +98,7 @@ argus:
     api-key: ${SILICONFLOW_API_KEY:}
     timeout: ${ARGUS_AI_TIMEOUT:30s}
     max-tokens: ${ARGUS_AI_MAX_TOKENS:800}
+    max-concurrent-runs: ${ARGUS_AI_MAX_CONCURRENT_RUNS:2}
+    max-run-seconds: ${ARGUS_AI_MAX_RUN_SECONDS:60}
+    max-context-chars: ${ARGUS_AI_MAX_CONTEXT_CHARS:64000}
+    recovery-stale-after: ${ARGUS_AI_RECOVERY_STALE_AFTER:2m}
