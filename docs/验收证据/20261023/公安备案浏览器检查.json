@@ -1,0 +1,24 @@
+{
+  "scope": "PUBLIC_SECURITY_FILING_BROWSER_CHECK",
+  "passed": true,
+  "domains": [
+    "apex",
+    "www"
+  ],
+  "viewports": [
+    1440,
+    390
+  ],
+  "checks": 42,
+  "pageErrors": 0,
+  "unexpectedWrites": 0,
+  "checksInclude": [
+    "ICP official link",
+    "public-security official link",
+    "HTTPS",
+    "mobile layout",
+    "console footer",
+    "operation permission",
+    "monitoring page"
+  ]
+}

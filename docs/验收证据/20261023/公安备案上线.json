@@ -1,0 +1,16 @@
+{
+  "scope": "PUBLIC_SECURITY_FILING_STATIC_RELEASE",
+  "passed": true,
+  "icpRecord": "闽ICP备2026040659号",
+  "publicSecurityRecord": "闽公网安备35082402000177号",
+  "officialLinks": [
+    "https://beian.miit.gov.cn/",
+    "https://beian.mps.gov.cn/#/query/webSearch?domain=wx-s.cn"
+  ],
+  "footerPublishedIndexSha256": "ac72481af91c7d4f25b988fc38783ec88fc39e171141e5514579befebe4d42d4",
+  "previousIndexSha256": "459d51a3492c28f9d06847d9a9ea36cc7ed5e303a1e484897e00e149d6e23921",
+  "oldAssetsRetained": true,
+  "browserChecks": 42,
+  "browserPageErrors": 0,
+  "browserUnexpectedWrites": 0
+}
