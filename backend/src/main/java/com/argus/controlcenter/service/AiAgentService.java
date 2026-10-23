@@ -4,6 +4,7 @@ import com.argus.controlcenter.config.AiProperties;
 import com.argus.controlcenter.domain.*;
 import com.argus.controlcenter.identity.*;
 import com.argus.controlcenter.repository.AiAgentRepository;
+import com.argus.controlcenter.config.ApiAccessInterceptor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,15 @@ public class AiAgentService {
     }
     public AiAgentRun get(String id,String projectId,CurrentActor actor){String p=scope(projectId);authorization.require(actor,p,ProjectPermission.RESOURCE_READ);return repository.getRun(id,p,actor.userId()).orElseThrow(()->new IllegalArgumentException("AI_RUN_NOT_FOUND"));}
     public java.util.List<java.util.Map<String,Object>> steps(String id,String projectId,CurrentActor actor){String p=scope(projectId);authorization.require(actor,p,ProjectPermission.RESOURCE_READ);repository.getRun(id,p,actor.userId()).orElseThrow(()->new IllegalArgumentException("AI_RUN_NOT_FOUND"));return repository.steps(id);}
+    public AiAgentRun approve(String id,String projectId,String instanceId,String mode,String key,CurrentActor actor,boolean legacyOperator){
+        String p=scope(projectId); authorization.require(actor,p,ProjectPermission.TASK_OPERATE);
+        AiAgentRun run=repository.getRun(id,p,actor.userId()).orElseThrow(()->new IllegalArgumentException("AI_RUN_NOT_FOUND"));
+        if(!"WAITING_APPROVAL".equals(run.getStatus())) throw new IllegalStateException("AI_RUN_NOT_APPROVABLE");
+        if(instanceId==null||instanceId.isBlank()||mode==null||mode.isBlank()) throw new IllegalArgumentException("AI_APPROVAL_TARGET_REQUIRED");
+        try { tasks.execute(instanceId,"RESTART",mode,key,p,actor,legacyOperator); }
+        catch(RuntimeException e){run.setErrorCode(e.getMessage());repository.updateRun(run);repository.step(id,4,"APPROVAL","REJECTED",instanceId,null,e.getMessage());throw e;}
+        run.setStatus("EXECUTION_SUBMITTED");run.setPhase("EXECUTION");repository.updateRun(run);repository.step(id,4,"APPROVAL","APPROVED",instanceId,"RESTART",null);return repository.getRun(id,p,actor.userId()).orElse(run);
+    }
     private String scope(String p){if(p==null||p.isBlank()){if(authorization.isIdentityMode())throw new IdentityAuthorizationException("PROJECT_REQUIRED",400);return IdentityConstants.LEGACY_PROJECT_ID;}return p;}
     private String context(String p,CurrentActor actor)throws Exception{var out=mapper.createObjectNode();var ns=out.putArray("nodes");nodes.findAll().stream().filter(n->p.equals(n.getProjectId())).forEach(n->{var x=ns.addObject();x.put("id",n.getId());x.put("name",n.getName());x.put("status",String.valueOf(n.getStatus()));x.put("sampledAt",String.valueOf(n.getSampledAt()));});var is=out.putArray("instances");instances.findAll().stream().filter(i->p.equals(i.getProjectId())).forEach(i->{var x=is.addObject();x.put("id",i.getId());x.put("name",i.getName());x.put("nodeId",i.getNodeId());x.put("status",String.valueOf(i.getStatus()));x.put("source",i.getDataSource());});out.put("logCount",logs.find(null,100,p).size());out.put("taskCount",tasks.findAll(p,actor).size());return mapper.writeValueAsString(out);}
     private String evidence(String p)throws Exception{return mapper.writeValueAsString(List.of(Map.of("type","PROJECT_SNAPSHOT","source","central.read_tools","projectId",p,"freshness","FRESH"),Map.of("type","TASK_HISTORY","source","central.tasks","projectId",p,"freshness","FRESH")));}
