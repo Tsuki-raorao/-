@@ -42,9 +42,21 @@ public class AiAgentService {
         AiAgentRun run=repository.getRun(id,p,actor.userId()).orElseThrow(()->new IllegalArgumentException("AI_RUN_NOT_FOUND"));
         if(!"WAITING_APPROVAL".equals(run.getStatus())) throw new IllegalStateException("AI_RUN_NOT_APPROVABLE");
         if(instanceId==null||instanceId.isBlank()||mode==null||mode.isBlank()) throw new IllegalArgumentException("AI_APPROVAL_TARGET_REQUIRED");
-        try { tasks.execute(instanceId,"RESTART",mode,key,p,actor,legacyOperator); }
+        Task submitted;
+        try { submitted=tasks.execute(instanceId,"RESTART",mode,key,p,actor,legacyOperator); }
         catch(RuntimeException e){run.setErrorCode(e.getMessage());repository.updateRun(run);repository.step(id,4,"APPROVAL","REJECTED",instanceId,null,e.getMessage());throw e;}
-        run.setStatus("EXECUTION_SUBMITTED");run.setPhase("EXECUTION");repository.updateRun(run);repository.step(id,4,"APPROVAL","APPROVED",instanceId,"RESTART",null);return repository.getRun(id,p,actor.userId()).orElse(run);
+        run.setTaskId(submitted.getId());run.setStatus("EXECUTION_SUBMITTED");run.setPhase("EXECUTION");repository.updateRun(run);repository.step(id,4,"APPROVAL","APPROVED",instanceId,submitted.getId(),null);return repository.getRun(id,p,actor.userId()).orElse(run);
+    }
+    public AiAgentRun verify(String id,String projectId,CurrentActor actor){
+        String p=scope(projectId); authorization.require(actor,p,ProjectPermission.RESOURCE_READ);
+        AiAgentRun run=repository.getRun(id,p,actor.userId()).orElseThrow(()->new IllegalArgumentException("AI_RUN_NOT_FOUND"));
+        if(run.getTaskId()==null||run.getTaskId().isBlank()) throw new IllegalStateException("AI_RUN_TASK_NOT_BOUND");
+        Task task=tasks.findById(run.getTaskId(),p,actor);
+        if(task.getStatus()==TaskStatus.SUCCEEDED){run.setStatus("COMPLETED");run.setPhase("VERIFICATION");}
+        else if(task.getStatus()==TaskStatus.FAILED||task.getStatus()==TaskStatus.UNKNOWN){run.setStatus("EXECUTION_FAILED");run.setPhase("VERIFICATION");run.setErrorCode(task.getResultCode());}
+        else {run.setStatus("VERIFICATION_PENDING");run.setPhase("VERIFICATION");}
+        repository.updateRun(run);repository.step(id,5,"VERIFICATION",run.getStatus(),task.getId(),task.getStatus().name(),run.getErrorCode());
+        return repository.getRun(id,p,actor.userId()).orElse(run);
     }
     private String scope(String p){if(p==null||p.isBlank()){if(authorization.isIdentityMode())throw new IdentityAuthorizationException("PROJECT_REQUIRED",400);return IdentityConstants.LEGACY_PROJECT_ID;}return p;}
     private String context(String p,CurrentActor actor)throws Exception{var out=mapper.createObjectNode();var ns=out.putArray("nodes");nodes.findAll().stream().filter(n->p.equals(n.getProjectId())).forEach(n->{var x=ns.addObject();x.put("id",n.getId());x.put("name",n.getName());x.put("status",String.valueOf(n.getStatus()));x.put("sampledAt",String.valueOf(n.getSampledAt()));});var is=out.putArray("instances");instances.findAll().stream().filter(i->p.equals(i.getProjectId())).forEach(i->{var x=is.addObject();x.put("id",i.getId());x.put("name",i.getName());x.put("nodeId",i.getNodeId());x.put("status",String.valueOf(i.getStatus()));x.put("source",i.getDataSource());});out.put("logCount",logs.find(null,100,p).size());out.put("taskCount",tasks.findAll(p,actor).size());return mapper.writeValueAsString(out);}
