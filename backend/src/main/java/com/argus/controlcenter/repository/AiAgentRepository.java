@@ -28,6 +28,9 @@ public class AiAgentRepository {
     public Optional<AiAgentRun> getRun(String id,String project,String actor){
         return jdbc.query("SELECT * FROM ai_agent_runs WHERE id=? AND project_id=? AND actor_user_id=?",this::mapRun,id,project,actor).stream().findFirst();
     }
+    public List<Map<String,Object>> steps(String runId){
+        return jdbc.queryForList("SELECT id,sequence_no,phase,status,input_json,output_json,error_code,started_at,finished_at FROM ai_agent_steps WHERE run_id=? ORDER BY sequence_no",runId);
+    }
     public void updateRun(AiAgentRun r){
         jdbc.update("UPDATE ai_agent_runs SET status=?,phase=?,answer=?,evidence_json=?,action_plan_json=?,error_code=?,updated_at=?,version_no=version_no+1 WHERE id=? AND project_id=? AND actor_user_id=?",r.getStatus(),r.getPhase(),r.getAnswer(),r.getEvidenceJson(),r.getActionPlanJson(),r.getErrorCode(),Timestamp.from(Instant.now()),r.getId(),r.getProjectId(),r.getActorUserId());
     }

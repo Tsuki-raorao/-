@@ -17,4 +17,5 @@ public class AiAgentController {
     @PostMapping("/sessions") public ResponseEntity<ApiResponse<AiAgentSession>> create(@RequestParam(required=false) String projectId,@Valid @RequestBody CreateAiSessionRequest body){return ResponseEntity.ok(ApiResponse.created(service.createSession(projectId,body.getTitle(),actors.current())));}
     @PostMapping("/sessions/{sessionId}/runs") public ResponseEntity<ApiResponse<AiAgentRun>> run(@PathVariable String sessionId,@RequestParam(required=false) String projectId,@Valid @RequestBody AiRunRequest body){return ResponseEntity.ok(ApiResponse.ok(service.run(sessionId,projectId,body.getQuestion(),actors.current())));}
     @GetMapping("/runs/{id}") public ApiResponse<AiAgentRun> get(@PathVariable String id,@RequestParam(required=false) String projectId){return ApiResponse.ok(service.get(id,projectId,actors.current()));}
+    @GetMapping("/runs/{id}/steps") public ApiResponse<?> steps(@PathVariable String id,@RequestParam(required=false) String projectId){return ApiResponse.ok(service.steps(id,projectId,actors.current()));}
 }
