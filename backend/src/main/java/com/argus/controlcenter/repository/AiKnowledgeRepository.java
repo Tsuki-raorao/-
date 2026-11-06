@@ -1,12 +1,12 @@
 package com.argus.controlcenter.repository;
 
+import com.argus.controlcenter.config.AiProperties;
+import com.argus.controlcenter.service.AiEmbeddingService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.argus.controlcenter.service.AiEmbeddingService;
-import com.argus.controlcenter.config.AiProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
