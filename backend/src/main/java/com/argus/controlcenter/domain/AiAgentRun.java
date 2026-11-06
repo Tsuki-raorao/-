@@ -3,7 +3,7 @@ package com.argus.controlcenter.domain;
 import java.time.Instant;
 
 public class AiAgentRun {
-    private String id, sessionId, projectId, actorUserId, question, status, phase, answer, evidenceJson, actionPlanJson, errorCode, taskId;
+    private String id, sessionId, projectId, actorUserId, question, status, phase, answer, evidenceJson, actionPlanJson, verificationJson, errorCode, taskId;
     private Instant createdAt, updatedAt;
     private long versionNo;
     public String getId(){return id;} public void setId(String v){id=v;}
@@ -16,6 +16,7 @@ public class AiAgentRun {
     public String getAnswer(){return answer;} public void setAnswer(String v){answer=v;}
     public String getEvidenceJson(){return evidenceJson;} public void setEvidenceJson(String v){evidenceJson=v;}
     public String getActionPlanJson(){return actionPlanJson;} public void setActionPlanJson(String v){actionPlanJson=v;}
+    public String getVerificationJson(){return verificationJson;} public void setVerificationJson(String v){verificationJson=v;}
     public String getErrorCode(){return errorCode;} public void setErrorCode(String v){errorCode=v;}
     public String getTaskId(){return taskId;} public void setTaskId(String v){taskId=v;}
     public Instant getCreatedAt(){return createdAt;} public void setCreatedAt(Instant v){createdAt=v;}

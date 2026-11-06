@@ -63,11 +63,37 @@ public class AiAgentService {
         AiAgentRun run=repository.getRun(id,p,actor.userId()).orElseThrow(()->new IllegalArgumentException("AI_RUN_NOT_FOUND"));
         if(run.getTaskId()==null||run.getTaskId().isBlank()) throw new IllegalStateException("AI_RUN_TASK_NOT_BOUND");
         Task task=tasks.findById(run.getTaskId(),p,actor);
-        if(task.getStatus()==TaskStatus.SUCCEEDED){run.setStatus("COMPLETED");run.setPhase("VERIFICATION");}
+        Map<String,Object> verification=new LinkedHashMap<>();
+        verification.put("taskId",task.getId()); verification.put("taskStatus",task.getStatus().name());
+        verification.put("resultCode",task.getResultCode()); verification.put("instanceId",task.getInstanceId());
+        Instance instance=null;
+        try { instance=instances.findById(task.getInstanceId()); } catch(RuntimeException ignored) { }
+        if(instance==null || !p.equals(instance.getProjectId())) {
+            verification.put("instanceFound",false);
+            verification.put("state","INSTANCE_EVIDENCE_MISSING");
+        } else {
+            verification.put("instanceFound",true); verification.put("instanceStatus",instance.getStatus().name());
+            verification.put("sampledAt",instance.getSampledAt());
+            List<LogEntry> recentLogs=logs.find(instance.getId(),20,p);
+            verification.put("recentLogCount",recentLogs.size());
+            verification.put("lastLogAt",recentLogs.isEmpty()?null:recentLogs.get(0).getTimestamp());
+            InstanceStatus expected=expectedStatus(task.getAction());
+            verification.put("expectedInstanceStatus",expected==null?null:expected.name());
+            verification.put("state",expected!=null && instance.getStatus()==expected?"MATCHED":"OBSERVATION_PENDING");
+        }
+        try { run.setVerificationJson(mapper.writeValueAsString(verification)); }
+        catch(Exception e) { throw new IllegalStateException("AI_VERIFICATION_SERIALIZATION_FAILED",e); }
+        boolean observationMatched="MATCHED".equals(verification.get("state"));
+        if(task.getStatus()==TaskStatus.SUCCEEDED && observationMatched){run.setStatus("COMPLETED");run.setPhase("VERIFICATION");}
         else if(task.getStatus()==TaskStatus.FAILED||task.getStatus()==TaskStatus.UNKNOWN){run.setStatus("EXECUTION_FAILED");run.setPhase("VERIFICATION");run.setErrorCode(task.getResultCode());}
         else {run.setStatus("VERIFICATION_PENDING");run.setPhase("VERIFICATION");}
         repository.updateRun(run);repository.step(id,5,"VERIFICATION",run.getStatus(),task.getId(),task.getStatus().name(),run.getErrorCode());
         return repository.getRun(id,p,actor.userId()).orElse(run);
+    }
+    private InstanceStatus expectedStatus(String action){
+        if("STOP".equals(action)) return InstanceStatus.STOPPED;
+        if("START".equals(action)||"RESTART".equals(action)) return InstanceStatus.RUNNING;
+        return null;
     }
     private String scope(String p){if(p==null||p.isBlank()){if(authorization.isIdentityMode())throw new IdentityAuthorizationException("PROJECT_REQUIRED",400);return IdentityConstants.LEGACY_PROJECT_ID;}return p;}
     private String context(String p,CurrentActor actor,String question)throws Exception{var out=mapper.createObjectNode();var ns=out.putArray("nodes");nodes.findAll().stream().filter(n->p.equals(n.getProjectId())).forEach(n->{var x=ns.addObject();x.put("id",n.getId());x.put("name",n.getName());x.put("status",String.valueOf(n.getStatus()));x.put("sampledAt",String.valueOf(n.getSampledAt()));});var is=out.putArray("instances");instances.findAll().stream().filter(i->p.equals(i.getProjectId())).forEach(i->{var x=is.addObject();x.put("id",i.getId());x.put("name",i.getName());x.put("nodeId",i.getNodeId());x.put("status",String.valueOf(i.getStatus()));x.put("source",i.getDataSource());});out.put("logCount",logs.find(null,100,p).size());out.put("taskCount",tasks.findAll(p,actor).size());out.set("runbooks",mapper.valueToTree(knowledge.search(p,question,10)));String value=mapper.writeValueAsString(out);return value.length()>properties.getMaxContextChars()?value.substring(0,properties.getMaxContextChars())+"\\n[CONTEXT_TRUNCATED]":value;}
