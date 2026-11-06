@@ -34,18 +34,19 @@ public class AiAgentService {
         AiAgentRun run=null;
         try {
             run=repository.createRun(session.id(),p,actor.userId(),question);
+            run.setStartedAt(java.time.Instant.now()); run.setProviderModel(properties.getModel()); repository.updateRun(run);
             String context=context(session.id(),p,actor,question); repository.step(run.getId(),1,"CONTEXT","SUCCEEDED",mapper.writeValueAsString(Map.of("projectId",p,"question",question)),context,null);
             if(System.nanoTime()>deadline) throw new IllegalStateException("AI_RUN_TIMEOUT");
             run.setPhase("ANALYSIS"); repository.updateRun(run);
-            String answer=askModel(question,context); repository.step(run.getId(),2,"ANALYSIS","SUCCEEDED",context,answer,null);
+            long providerStarted=System.nanoTime(); String answer=askModel(question,context); run.setProviderLatencyMs((System.nanoTime()-providerStarted)/1_000_000L); run.setPromptChars(question.length()+context.length()); run.setResponseChars(answer.length()); repository.step(run.getId(),2,"ANALYSIS","SUCCEEDED",context,answer,null);
             if(System.nanoTime()>deadline) throw new IllegalStateException("AI_RUN_TIMEOUT");
-            run.setAnswer(answer); run.setEvidenceJson(evidence(p)); run.setActionPlanJson(actionPlan(answer)); run.setPhase("PROPOSAL"); run.setStatus("WAITING_APPROVAL"); repository.updateRun(run);
+            run.setAnswer(answer); run.setEvidenceJson(evidence(p)); run.setActionPlanJson(actionPlan(answer)); run.setPhase("PROPOSAL"); run.setStatus("WAITING_APPROVAL"); run.setFinishedAt(java.time.Instant.now()); repository.updateRun(run);
             memoryRepository.save(session.id(),p,actor.userId(),run.getId(),"RUN_SUMMARY",memoryText(question,answer));
             repository.step(run.getId(),3,"PROPOSAL","WAITING_APPROVAL",answer,run.getActionPlanJson(),null);
             return repository.getRun(run.getId(),p,actor.userId()).orElse(run);
         } catch(Exception e){
             if (run == null) throw new IllegalStateException(e instanceof IllegalStateException ? e.getMessage() : "AI_AGENT_FAILED", e);
-            run.setStatus("FAILED");run.setPhase("FAILED");run.setErrorCode(e instanceof IllegalStateException?e.getMessage():"AI_AGENT_FAILED");repository.updateRun(run);repository.step(run.getId(),repository.nextStepSequence(run.getId()),run.getPhase(),"FAILED",question,null,run.getErrorCode());throw new IllegalStateException(run.getErrorCode(),e);
+            run.setStatus("FAILED");run.setPhase("FAILED");run.setFinishedAt(java.time.Instant.now());run.setErrorCode(e instanceof IllegalStateException?e.getMessage():"AI_AGENT_FAILED");repository.updateRun(run);repository.step(run.getId(),repository.nextStepSequence(run.getId()),run.getPhase(),"FAILED",question,null,run.getErrorCode());throw new IllegalStateException(run.getErrorCode(),e);
         }
         finally { runSlots.release(); }
     }

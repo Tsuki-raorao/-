@@ -4,7 +4,10 @@ import java.time.Instant;
 
 public class AiAgentRun {
     private String id, sessionId, projectId, actorUserId, question, status, phase, answer, evidenceJson, actionPlanJson, verificationJson, errorCode, taskId;
-    private Instant createdAt, updatedAt;
+    private Instant createdAt, updatedAt, startedAt, finishedAt;
+    private Long providerLatencyMs;
+    private Integer promptChars, responseChars;
+    private String providerModel;
     private long versionNo;
     public String getId(){return id;} public void setId(String v){id=v;}
     public String getSessionId(){return sessionId;} public void setSessionId(String v){sessionId=v;}
@@ -21,5 +24,11 @@ public class AiAgentRun {
     public String getTaskId(){return taskId;} public void setTaskId(String v){taskId=v;}
     public Instant getCreatedAt(){return createdAt;} public void setCreatedAt(Instant v){createdAt=v;}
     public Instant getUpdatedAt(){return updatedAt;} public void setUpdatedAt(Instant v){updatedAt=v;}
+    public Instant getStartedAt(){return startedAt;} public void setStartedAt(Instant v){startedAt=v;}
+    public Instant getFinishedAt(){return finishedAt;} public void setFinishedAt(Instant v){finishedAt=v;}
+    public Long getProviderLatencyMs(){return providerLatencyMs;} public void setProviderLatencyMs(Long v){providerLatencyMs=v;}
+    public Integer getPromptChars(){return promptChars;} public void setPromptChars(Integer v){promptChars=v;}
+    public Integer getResponseChars(){return responseChars;} public void setResponseChars(Integer v){responseChars=v;}
+    public String getProviderModel(){return providerModel;} public void setProviderModel(String v){providerModel=v;}
     public long getVersionNo(){return versionNo;} public void setVersionNo(long v){versionNo=v;}
 }
