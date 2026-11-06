@@ -96,7 +96,7 @@ argus:
     base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
     model: ${SILICONFLOW_MODEL:deepseek-ai/DeepSeek-V4-Flash}
     api-key: ${SILICONFLOW_API_KEY:}
-    timeout: ${ARGUS_AI_TIMEOUT:30s}
+    timeout: ${ARGUS_AI_TIMEOUT:45s}
     max-tokens: ${ARGUS_AI_MAX_TOKENS:800}
     max-concurrent-runs: ${ARGUS_AI_MAX_CONCURRENT_RUNS:2}
     max-run-seconds: ${ARGUS_AI_MAX_RUN_SECONDS:60}

@@ -9,7 +9,7 @@ public class AiProperties {
     private String baseUrl;
     private String model;
     private String apiKey;
-    private Duration timeout = Duration.ofSeconds(30);
+    private Duration timeout = Duration.ofSeconds(45);
     private int maxTokens = 800;
     private int maxConcurrentRuns = 2;
     private int maxRunSeconds = 60;

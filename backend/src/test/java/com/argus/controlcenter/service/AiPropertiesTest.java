@@ -34,4 +34,10 @@ class AiPropertiesTest {
         properties.setRecoveryStaleAfter(Duration.ofSeconds(90));
         assertThat(properties.getRecoveryStaleAfter()).isEqualTo(Duration.ofSeconds(90));
     }
+
+    @Test
+    void providerTimeoutDefaultsToAWindowLongerThanTheTypicalModelRoundTrip() {
+        AiProperties properties = new AiProperties();
+        assertThat(properties.getTimeout()).isEqualTo(Duration.ofSeconds(45));
+    }
 }
