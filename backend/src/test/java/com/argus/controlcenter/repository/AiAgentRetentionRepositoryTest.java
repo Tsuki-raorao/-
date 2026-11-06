@@ -26,11 +26,16 @@ class AiAgentRetentionRepositoryTest {
         String pendingSession = UUID.randomUUID().toString();
         String terminalRun = UUID.randomUUID().toString();
         String pendingRun = UUID.randomUUID().toString();
+        String retryParent = UUID.randomUUID().toString();
+        String retryChild = UUID.randomUUID().toString();
         try {
             insertSession(terminalSession, old);
             insertSession(pendingSession, old);
             insertRun(terminalRun, terminalSession, "COMPLETED", old);
             insertRun(pendingRun, pendingSession, "WAITING_APPROVAL", old);
+            insertRun(retryParent, terminalSession, "COMPLETED", old);
+            jdbc.update("INSERT INTO ai_agent_runs(id,session_id,project_id,actor_user_id,question,status,phase,evidence_json,retry_of_run_id,created_at,updated_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?,?,0)",
+                    retryChild, terminalSession, "retention-project", "retention-user", "retry", "WAITING_APPROVAL", "PROPOSAL", "[]", retryParent, Timestamp.from(old), Timestamp.from(old));
             jdbc.update("INSERT INTO ai_agent_steps(id,run_id,sequence_no,phase,status,input_json,output_json,started_at,finished_at) VALUES(?,?,?,?,?,?,?,?,?)",
                     UUID.randomUUID().toString(), terminalRun, 1, "PROPOSAL", "COMPLETED", "{}", "{}", Timestamp.from(old), Timestamp.from(old));
             jdbc.update("INSERT INTO ai_agent_memories(id,session_id,project_id,actor_user_id,memory_type,content,source_run_id,status,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
@@ -44,10 +49,12 @@ class AiAgentRetentionRepositoryTest {
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ai_agent_memories WHERE source_run_id=?", Integer.class, terminalRun)).isZero();
             assertThat(jdbc.queryForObject("SELECT status FROM ai_agent_runs WHERE id=?", String.class, pendingRun)).isEqualTo("WAITING_APPROVAL");
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ai_agent_memories WHERE source_run_id=?", Integer.class, pendingRun)).isEqualTo(1);
+            assertThat(jdbc.queryForObject("SELECT status FROM ai_agent_runs WHERE id=?", String.class, retryParent)).isEqualTo("COMPLETED");
+            assertThat(jdbc.queryForObject("SELECT retry_of_run_id FROM ai_agent_runs WHERE id=?", String.class, retryChild)).isEqualTo(retryParent);
         } finally {
-            jdbc.update("DELETE FROM ai_agent_memories WHERE source_run_id IN (?,?)", terminalRun, pendingRun);
-            jdbc.update("DELETE FROM ai_agent_steps WHERE run_id IN (?,?)", terminalRun, pendingRun);
-            jdbc.update("DELETE FROM ai_agent_runs WHERE id IN (?,?)", terminalRun, pendingRun);
+            jdbc.update("DELETE FROM ai_agent_memories WHERE source_run_id IN (?,?,?,?)", terminalRun, pendingRun, retryParent, retryChild);
+            jdbc.update("DELETE FROM ai_agent_steps WHERE run_id IN (?,?,?,?)", terminalRun, pendingRun, retryParent, retryChild);
+            jdbc.update("DELETE FROM ai_agent_runs WHERE id IN (?,?,?,?)", terminalRun, pendingRun, retryParent, retryChild);
             jdbc.update("DELETE FROM ai_sessions WHERE id IN (?,?)", terminalSession, pendingSession);
         }
     }

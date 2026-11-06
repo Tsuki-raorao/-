@@ -27,8 +27,10 @@ public class AiAgentRetentionRepository {
     }
 
     private int purgeTerminalRuns(Instant cutoff, int limit) {
-        List<String> ids = jdbc.query("SELECT id FROM ai_agent_runs WHERE status IN " + TERMINAL
-                        + " AND updated_at<? ORDER BY updated_at LIMIT " + limit,
+        List<String> ids = jdbc.query("SELECT r.id FROM ai_agent_runs r WHERE r.status IN " + TERMINAL
+                        + " AND r.updated_at<? AND NOT EXISTS (SELECT 1 FROM ai_agent_runs child "
+                        + "WHERE child.retry_of_run_id=r.id AND child.status NOT IN " + TERMINAL + ") "
+                        + "ORDER BY r.updated_at LIMIT " + limit,
                 (rs, n) -> rs.getString("id"), Timestamp.from(cutoff));
         int deleted = 0;
         for (String id : ids) {

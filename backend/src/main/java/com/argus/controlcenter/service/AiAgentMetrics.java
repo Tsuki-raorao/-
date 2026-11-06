@@ -34,6 +34,10 @@ public class AiAgentMetrics {
     }
 
     public void recordProvider(Duration duration, String result) {
+        recordProvider(duration, result, null, null, null);
+    }
+
+    public void recordProvider(Duration duration, String result, Integer promptTokens, Integer completionTokens, Long costMicros) {
         Timer.builder("argus.ai.provider.duration")
                 .description("AI provider request duration")
                 .tag("result", safe(result))
@@ -44,6 +48,22 @@ public class AiAgentMetrics {
                 .tag("result", safe(result))
                 .register(registry)
                 .increment();
+        if (promptTokens != null && promptTokens >= 0) recordTokens("prompt", promptTokens);
+        if (completionTokens != null && completionTokens >= 0) recordTokens("completion", completionTokens);
+        if (costMicros != null && costMicros >= 0) {
+            Counter.builder("argus.ai.provider.cost.microunits")
+                    .description("AI provider estimated cost in configured micro currency units")
+                    .register(registry)
+                    .increment(costMicros);
+        }
+    }
+
+    private void recordTokens(String kind, int value) {
+        Counter.builder("argus.ai.provider.tokens")
+                .description("AI provider token usage")
+                .tag("direction", kind)
+                .register(registry)
+                .increment(Math.max(0, value));
     }
 
     public void recordConcurrencyRejected() {

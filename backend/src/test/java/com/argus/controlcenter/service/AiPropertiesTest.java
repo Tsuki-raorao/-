@@ -40,4 +40,13 @@ class AiPropertiesTest {
         AiProperties properties = new AiProperties();
         assertThat(properties.getTimeout()).isEqualTo(Duration.ofSeconds(45));
     }
+
+    @Test
+    void providerCostConfigurationIsBoundedAndCannotBecomeNegative() {
+        AiProperties properties = new AiProperties();
+        properties.setInputCostMicrosPerMillionTokens(-1);
+        properties.setOutputCostMicrosPerMillionTokens(Long.MAX_VALUE);
+        assertThat(properties.getInputCostMicrosPerMillionTokens()).isZero();
+        assertThat(properties.getOutputCostMicrosPerMillionTokens()).isEqualTo(1_000_000_000_000L);
+    }
 }

@@ -15,6 +15,8 @@ public class AiProperties {
     private int maxRunSeconds = 60;
     private int maxContextChars = 64000;
     private Duration recoveryStaleAfter = Duration.ofMinutes(2);
+    private long inputCostMicrosPerMillionTokens;
+    private long outputCostMicrosPerMillionTokens;
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean value) { enabled = value; }
     public String getBaseUrl() { return baseUrl; }
@@ -35,4 +37,9 @@ public class AiProperties {
     public void setMaxContextChars(int value) { maxContextChars = Math.max(4000, Math.min(value, 200000)); }
     public Duration getRecoveryStaleAfter() { return recoveryStaleAfter; }
     public void setRecoveryStaleAfter(Duration value) { recoveryStaleAfter = value == null ? Duration.ofMinutes(2) : value; }
+    public long getInputCostMicrosPerMillionTokens() { return inputCostMicrosPerMillionTokens; }
+    public void setInputCostMicrosPerMillionTokens(long value) { inputCostMicrosPerMillionTokens = clampCost(value); }
+    public long getOutputCostMicrosPerMillionTokens() { return outputCostMicrosPerMillionTokens; }
+    public void setOutputCostMicrosPerMillionTokens(long value) { outputCostMicrosPerMillionTokens = clampCost(value); }
+    private long clampCost(long value) { return Math.max(0L, Math.min(value, 1_000_000_000_000L)); }
 }

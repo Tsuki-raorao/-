@@ -107,6 +107,8 @@ argus:
     max-run-seconds: ${ARGUS_AI_MAX_RUN_SECONDS:60}
     max-context-chars: ${ARGUS_AI_MAX_CONTEXT_CHARS:64000}
     recovery-stale-after: ${ARGUS_AI_RECOVERY_STALE_AFTER:2m}
+    input-cost-micros-per-million-tokens: ${ARGUS_AI_INPUT_COST_MICROS_PER_MILLION:0}
+    output-cost-micros-per-million-tokens: ${ARGUS_AI_OUTPUT_COST_MICROS_PER_MILLION:0}
     retention:
       enabled: ${ARGUS_AI_RETENTION_ENABLED:true}
       retention-days: ${ARGUS_AI_RETENTION_DAYS:30}
