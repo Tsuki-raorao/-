@@ -42,6 +42,11 @@ class ApiAccessInterceptorTest {
 
         MockHttpServletRequest health = new MockHttpServletRequest("GET", "/api/health");
         assertThat(interceptor.preHandle(health, new MockHttpServletResponse(), new Object())).isTrue();
+
+        MockHttpServletRequest metrics = new MockHttpServletRequest("GET", "/actuator/prometheus");
+        assertThat(interceptor.preHandle(metrics, new MockHttpServletResponse(), new Object())).isFalse();
+        metrics.addHeader("Authorization", "Bearer test-token");
+        assertThat(interceptor.preHandle(metrics, new MockHttpServletResponse(), new Object())).isTrue();
     }
 
     @Test

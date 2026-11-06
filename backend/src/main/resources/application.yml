@@ -1,5 +1,10 @@
 server:
   port: 8080
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
 spring:
   data:
     redis:
@@ -102,3 +107,7 @@ argus:
     max-run-seconds: ${ARGUS_AI_MAX_RUN_SECONDS:60}
     max-context-chars: ${ARGUS_AI_MAX_CONTEXT_CHARS:64000}
     recovery-stale-after: ${ARGUS_AI_RECOVERY_STALE_AFTER:2m}
+    retention:
+      enabled: ${ARGUS_AI_RETENTION_ENABLED:true}
+      retention-days: ${ARGUS_AI_RETENTION_DAYS:30}
+      batch-size: ${ARGUS_AI_RETENTION_BATCH_SIZE:200}
