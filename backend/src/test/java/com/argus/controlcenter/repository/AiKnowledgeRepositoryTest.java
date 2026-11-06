@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Verifies deterministic, explainable and project-scoped knowledge retrieval. */
 @SpringBootTest
@@ -29,7 +30,8 @@ class AiKnowledgeRepositoryTest {
             List<Map<String, Object>> rows = repository.search(project, "节点状态", 10);
             assertThat(rows).isNotEmpty();
             assertThat(rows.get(0).get("document_id")).isEqualTo(first);
-            assertThat(rows.get(0).get("retrieval")).isEqualTo("LEXICAL_EXPLAINABLE");
+            assertThat(rows.get(0).get("retrieval")).isEqualTo("HYBRID_LEXICAL_COSINE");
+            assertThat(rows.get(0).get("semanticScore")).isInstanceOf(Number.class);
             assertThat(rows.get(0).get("matchedTerms").toString()).contains("节点", "状态");
             assertThat(rows).allMatch(row -> !other.equals(row.get("document_id")));
         } finally {
@@ -50,6 +52,42 @@ class AiKnowledgeRepositoryTest {
                     || "2".equals(String.valueOf(row.get("version"))));
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ai_knowledge_documents WHERE project_id=? AND status='DEPRECATED'",
                     Integer.class, project)).isEqualTo(1);
+        } finally {
+            jdbc.update("DELETE FROM ai_knowledge_chunks WHERE project_id=?", project);
+            jdbc.update("DELETE FROM ai_knowledge_documents WHERE project_id=?", project);
+        }
+    }
+
+    @Test
+    void savedChunkHasDeterministicLocalEmbeddingAndModelMarker() {
+        String project = "knowledge-embedding-project";
+        repository.save(project, "Agent 手册", "runbook://embedding-a", "1", "节点心跳采样与日志状态。");
+        repository.save(project, "Agent 手册", "runbook://embedding-b", "1", "节点心跳采样与日志状态。");
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                    "SELECT embedding_json,embedding_model FROM ai_knowledge_chunks WHERE project_id=? ORDER BY embedding_json",
+                    project);
+            assertThat(rows).hasSize(2);
+            assertThat(rows.get(0).get("EMBEDDING_MODEL")).isEqualTo("local-hash-v1");
+            assertThat(rows.get(0).get("EMBEDDING_JSON")).isEqualTo(rows.get(1).get("EMBEDDING_JSON"));
+            assertThat(String.valueOf(rows.get(0).get("EMBEDDING_JSON")).split(",")).hasSize(64);
+        } finally {
+            jdbc.update("DELETE FROM ai_knowledge_chunks WHERE project_id=?", project);
+            jdbc.update("DELETE FROM ai_knowledge_documents WHERE project_id=?", project);
+        }
+    }
+
+    @Test
+    void saveRollsBackDeprecationWhenVersionInsertFails() {
+        String project = "knowledge-transaction-project";
+        repository.save(project, "手册", "runbook://transaction", "1", "初始内容");
+        try {
+            assertThatThrownBy(() -> repository.save(project, "手册", "runbook://transaction", "1", "重复版本"))
+                    .isInstanceOf(RuntimeException.class);
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ai_knowledge_documents WHERE project_id=? AND status='ACTIVE'",
+                    Integer.class, project)).isEqualTo(1);
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ai_knowledge_documents WHERE project_id=? AND status='DEPRECATED'",
+                    Integer.class, project)).isZero();
         } finally {
             jdbc.update("DELETE FROM ai_knowledge_chunks WHERE project_id=?", project);
             jdbc.update("DELETE FROM ai_knowledge_documents WHERE project_id=?", project);
