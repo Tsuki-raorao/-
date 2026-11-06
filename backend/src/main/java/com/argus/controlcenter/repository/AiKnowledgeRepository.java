@@ -3,13 +3,16 @@ package com.argus.controlcenter.repository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.argus.controlcenter.service.AiEmbeddingService;
+import com.argus.controlcenter.config.AiProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashSet;
@@ -24,14 +27,22 @@ import java.util.regex.Pattern;
 /** Project-scoped knowledge storage with deterministic, explainable hybrid retrieval. */
 @Repository
 public class AiKnowledgeRepository {
-    static final String EMBEDDING_MODEL = "local-hash-v1";
-    private static final int EMBEDDING_DIMENSION = 64;
+    /** Kept as a compatibility marker for callers that used the original local provider constant. */
+    static final String EMBEDDING_MODEL = AiEmbeddingService.LOCAL_MODEL;
     private static final Pattern TOKEN_PATTERN = Pattern.compile("[\\p{L}\\p{N}_-]+");
 
     private final JdbcTemplate jdbc;
+    private final AiEmbeddingService embeddingService;
 
-    public AiKnowledgeRepository(JdbcTemplate jdbc) {
+    @Autowired
+    public AiKnowledgeRepository(JdbcTemplate jdbc, AiEmbeddingService embeddingService) {
         this.jdbc = jdbc;
+        this.embeddingService = embeddingService;
+    }
+
+    /** Compatibility constructor for small standalone repository tests; Spring uses the injected provider. */
+    public AiKnowledgeRepository(JdbcTemplate jdbc) {
+        this(jdbc, new AiEmbeddingService(new AiProperties(), new ObjectMapper()));
     }
 
     /** Replaces only the active version from the same source as one transaction. */
@@ -47,9 +58,10 @@ public class AiKnowledgeRepository {
         int no = 0;
         for (int start = 0; start < content.length(); start += 1800) {
             String chunk = content.substring(start, Math.min(content.length(), start + 1800));
+            AiEmbeddingService.Embedding embedding = embeddingService.embed(title + "\n" + chunk);
             jdbc.update("INSERT INTO ai_knowledge_chunks(id,document_id,project_id,chunk_no,content,content_hash,created_at,embedding_json,embedding_model) VALUES(?,?,?,?,?,?,?,?,?)",
                     UUID.randomUUID().toString(), id, project, no++, chunk, sha(chunk), Timestamp.from(now),
-                    vectorJson(embed(title + "\n" + chunk)), EMBEDDING_MODEL);
+                    vectorJson(embedding.vector()), embedding.model());
         }
         return id;
     }
@@ -61,7 +73,7 @@ public class AiKnowledgeRepository {
     public List<Map<String, Object>> search(String project, String query, int limit) {
         List<String> terms = tokenize(query);
         if (terms.isEmpty()) return List.of();
-        double[] queryVector = embed(query);
+        double[] queryVector = embeddingService.embed(query).vector();
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT d.id AS document_id,d.title,d.source_uri,d.version,d.updated_at AS document_updated_at,"
                         + "c.id AS chunk_id,c.chunk_no,c.content,c.embedding_json,c.embedding_model "
@@ -112,21 +124,6 @@ public class AiKnowledgeRepository {
         return List.copyOf(terms);
     }
 
-    private double[] embed(String text) {
-        double[] vector = new double[EMBEDDING_DIMENSION];
-        List<String> terms = tokenize(text);
-        for (String term : terms) {
-            byte[] digest = digest(term);
-            int index = ((digest[0] & 0xff) << 8 | (digest[1] & 0xff)) % EMBEDDING_DIMENSION;
-            double magnitude = 1d + Math.min(term.length(), 8) / 8d;
-            vector[index] += (digest[2] & 1) == 0 ? magnitude : -magnitude;
-        }
-        double norm = Math.sqrt(Arrays.stream(vector).map(value -> value * value).sum());
-        if (norm == 0d) return vector;
-        for (int i = 0; i < vector.length; i++) vector[i] /= norm;
-        return vector;
-    }
-
     private String vectorJson(double[] vector) {
         StringBuilder json = new StringBuilder("[");
         for (int i = 0; i < vector.length; i++) {
@@ -140,8 +137,9 @@ public class AiKnowledgeRepository {
         if (json == null || json.isBlank()) return new double[0];
         String body = json.trim();
         if (body.length() < 2 || body.charAt(0) != '[' || body.charAt(body.length() - 1) != ']') return new double[0];
-        String[] values = body.substring(1, body.length() - 1).split(",");
-        if (values.length != EMBEDDING_DIMENSION) return new double[0];
+        String inner = body.substring(1, body.length() - 1).trim();
+        if (inner.isEmpty()) return new double[0];
+        String[] values = inner.split(",");
         double[] vector = new double[values.length];
         try {
             for (int i = 0; i < values.length; i++) vector[i] = Double.parseDouble(values[i]);
@@ -152,10 +150,16 @@ public class AiKnowledgeRepository {
     }
 
     private double cosine(double[] left, double[] right) {
-        if (left.length == 0 || right.length != left.length) return 0d;
+        if (left.length == 0 || right.length == 0) return 0d;
+        int overlap = Math.min(left.length, right.length);
         double dot = 0d;
-        for (int i = 0; i < left.length; i++) dot += left[i] * right[i];
-        return Math.max(0d, dot);
+        double leftNorm = 0d;
+        double rightNorm = 0d;
+        for (int i = 0; i < left.length; i++) leftNorm += left[i] * left[i];
+        for (int i = 0; i < right.length; i++) rightNorm += right[i] * right[i];
+        for (int i = 0; i < overlap; i++) dot += left[i] * right[i];
+        if (leftNorm == 0d || rightNorm == 0d) return 0d;
+        return Math.max(0d, dot / Math.sqrt(leftNorm * rightNorm));
     }
 
     private byte[] digest(String value) {

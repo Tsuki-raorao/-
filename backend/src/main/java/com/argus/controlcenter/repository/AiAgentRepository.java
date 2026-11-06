@@ -31,6 +31,12 @@ public class AiAgentRepository {
     public Optional<AiAgentRun> getRun(String id,String project,String actor){
         return jdbc.query("SELECT * FROM ai_agent_runs WHERE id=? AND project_id=? AND actor_user_id=?",this::mapRun,id,project,actor).stream().findFirst();
     }
+    /** Read-only project/window query used by aggregate evaluation. */
+    public List<AiAgentRun> findRuns(String project, Instant since, int limit) {
+        int bounded = Math.max(1, Math.min(501, limit));
+        return jdbc.query("SELECT * FROM ai_agent_runs WHERE project_id=? AND created_at>=? ORDER BY created_at DESC,id DESC LIMIT " + bounded,
+                this::mapRun, project, Timestamp.from(since));
+    }
     public Optional<AiAgentRun> findRetryByKey(String project,String actor,String retryKey){
         return jdbc.query("SELECT * FROM ai_agent_runs WHERE project_id=? AND actor_user_id=? AND retry_key=?",this::mapRun,project,actor,retryKey).stream().findFirst();
     }

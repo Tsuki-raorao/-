@@ -17,6 +17,12 @@ import java.util.regex.Pattern;
  */
 @Service
 public class AiRunEvaluationService {
+    private static final int MAX_WINDOW_MINUTES = 7 * 24 * 60;
+    private static final int MAX_BATCH_SIZE = 500;
+    /** Fixed, low-cardinality finding vocabulary used by reports and gates. */
+    static final List<String> FINDING_CODES = List.of(
+            "STATUS_UNKNOWN", "ERROR_CODE_MISSING", "LATENCY_INVALID",
+            "CHAIN_INCOMPLETE", "SECRET_LEAK_DETECTED");
     private static final Set<String> KNOWN_STATUSES = Set.of(
             "RUNNING", "WAITING_APPROVAL", "EXECUTION_SUBMITTED", "COMPLETED",
             "EXECUTION_FAILED", "VERIFICATION_PENDING", "FAILED", "RECOVERY_REQUIRED");
@@ -72,6 +78,48 @@ public class AiRunEvaluationService {
         return new EvaluationReport(run.getId(), status, run.getErrorCode(), latencyMs,
                 run.getProviderLatencyMs(), statusValid, errorCodeValid, latencyValid,
                 chainComplete, sensitiveDataSafe, passed, findings);
+    }
+
+    /**
+     * Evaluate recent runs in one project without invoking a provider or
+     * changing any run/task state.  Only aggregate counts are returned.
+     */
+    public AiEvaluationBatchReport evaluateBatch(String projectId, int windowMinutes, int limit,
+                                                  CurrentActor actor) {
+        String project = scope(projectId);
+        authorization.require(actor, project, ProjectPermission.RESOURCE_READ);
+        int minutes = bounded(windowMinutes, 1, MAX_WINDOW_MINUTES);
+        int requested = bounded(limit, 1, MAX_BATCH_SIZE);
+        Instant end = Instant.now();
+        Instant start = end.minus(Duration.ofMinutes(minutes));
+        List<AiAgentRun> runs = repository.findRuns(project, start, requested + 1);
+        boolean truncated = runs.size() > requested;
+        List<AiAgentRun> selected = truncated ? runs.subList(0, requested) : runs;
+        List<EvaluationReport> reports = new ArrayList<>(selected.size());
+        for (AiAgentRun run : selected) reports.add(evaluate(run, repository.steps(run.getId())));
+        return aggregate(project, start, end, minutes, requested, truncated, reports);
+    }
+
+    /** Pure aggregate operation used by service and offline tests. */
+    AiEvaluationBatchReport aggregate(String projectId, Instant start, Instant end,
+                                      int windowMinutes, int limit, boolean truncated,
+                                      List<EvaluationReport> reports) {
+        List<EvaluationReport> values = reports == null ? List.of() : reports;
+        int passed = (int) values.stream().filter(EvaluationReport::passed).count();
+        Map<String, Integer> findings = new LinkedHashMap<>();
+        for (String code : FINDING_CODES) findings.put(code, 0);
+        for (EvaluationReport report : values) {
+            for (String finding : report.findings()) {
+                // Ignore unknown values so the public vocabulary stays bounded.
+                if (findings.containsKey(finding)) findings.computeIfPresent(finding, (k, v) -> v + 1);
+            }
+        }
+        int total = values.size();
+        // An empty window has no evidence for a release gate, so it reports a
+        // zero rate rather than looking like a successful 100% sample.
+        double passRate = total == 0 ? 0.0 : (double) passed / total;
+        return new AiEvaluationBatchReport(projectId, start, end, windowMinutes, limit,
+                total, passed, total - passed, passRate, truncated, findings);
     }
 
     private boolean chainComplete(AiAgentRun run, List<Map<String, Object>> steps) {
@@ -142,6 +190,7 @@ public class AiRunEvaluationService {
     }
 
     private static boolean nonBlank(String value) { return value != null && !value.isBlank(); }
+    private static int bounded(int value, int min, int max) { return Math.max(min, Math.min(max, value)); }
     private static String text(Object value) { return value == null ? "" : String.valueOf(value); }
     private static Number number(Object value) { return value instanceof Number n ? n : null; }
 }

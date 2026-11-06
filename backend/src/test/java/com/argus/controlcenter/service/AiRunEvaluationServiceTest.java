@@ -67,6 +67,29 @@ class AiRunEvaluationServiceTest {
         assertThat(report.findings()).contains("LATENCY_INVALID");
     }
 
+    @Test
+    void aggregatesRecentReportsWithFixedLowCardinalityFindingCodes() {
+        EvaluationReport passed = evaluator.evaluate(run("WAITING_APPROVAL"), List.of(
+                step(1, "CONTEXT", "SUCCEEDED"), step(2, "ANALYSIS", "SUCCEEDED"),
+                step(3, "PROPOSAL", "WAITING_APPROVAL")));
+        EvaluationReport failed = evaluator.evaluate(run("FAILED"), List.of(step(1, "ANALYSIS", "FAILED")));
+        EvaluationReport incomplete = evaluator.evaluate(run("EXECUTION_SUBMITTED"), List.of(
+                step(1, "CONTEXT", "SUCCEEDED"), step(2, "ANALYSIS", "SUCCEEDED"),
+                step(3, "PROPOSAL", "WAITING_APPROVAL")));
+
+        AiEvaluationBatchReport report = evaluator.aggregate("project-1",
+                Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T01:00:00Z"),
+                60, 100, false, List.of(passed, failed, incomplete));
+
+        assertThat(report.evaluatedRuns()).isEqualTo(3);
+        assertThat(report.passedRuns()).isEqualTo(1);
+        assertThat(report.failedRuns()).isEqualTo(2);
+        assertThat(report.passRate()).isEqualTo(1.0 / 3.0);
+        assertThat(report.findingCounts()).containsKeys(AiRunEvaluationService.FINDING_CODES.toArray(String[]::new));
+        assertThat(report.findingCounts().get("CHAIN_INCOMPLETE")).isEqualTo(1);
+        assertThat(report.findingCounts().get("ERROR_CODE_MISSING")).isEqualTo(1);
+    }
+
     private AiAgentRun run(String status) {
         AiAgentRun run = new AiAgentRun();
         run.setId("run-1");

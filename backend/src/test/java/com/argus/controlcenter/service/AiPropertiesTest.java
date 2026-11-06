@@ -42,6 +42,20 @@ class AiPropertiesTest {
     }
 
     @Test
+    void embeddingProviderIsLocalByDefaultAndCanBeConfiguredSeparately() {
+        AiProperties properties = new AiProperties();
+        assertThat(properties.getEmbeddingModel()).isNull();
+        assertThat(properties.getEmbeddingBaseUrl()).isNull();
+        assertThat(properties.getEmbeddingTimeout()).isEqualTo(Duration.ofSeconds(10));
+        properties.setEmbeddingModel("text-embedding-3-small");
+        properties.setEmbeddingBaseUrl("https://example.test/v1");
+        properties.setEmbeddingApiKey("secret");
+        assertThat(properties.getEmbeddingModel()).isEqualTo("text-embedding-3-small");
+        assertThat(properties.getEmbeddingBaseUrl()).isEqualTo("https://example.test/v1");
+        assertThat(properties.getEmbeddingApiKey()).isEqualTo("secret");
+    }
+
+    @Test
     void providerCostConfigurationIsBoundedAndCannotBecomeNegative() {
         AiProperties properties = new AiProperties();
         properties.setInputCostMicrosPerMillionTokens(-1);

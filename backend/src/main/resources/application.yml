@@ -101,6 +101,11 @@ argus:
     base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
     model: ${SILICONFLOW_MODEL:deepseek-ai/DeepSeek-V4-Flash}
     api-key: ${SILICONFLOW_API_KEY:}
+    # Embeddings stay local and deterministic unless both remote fields are configured.
+    embedding-base-url: ${ARGUS_AI_EMBEDDING_BASE_URL:}
+    embedding-model: ${ARGUS_AI_EMBEDDING_MODEL:}
+    embedding-api-key: ${ARGUS_AI_EMBEDDING_API_KEY:}
+    embedding-timeout: ${ARGUS_AI_EMBEDDING_TIMEOUT:10s}
     timeout: ${ARGUS_AI_TIMEOUT:45s}
     max-tokens: ${ARGUS_AI_MAX_TOKENS:800}
     max-concurrent-runs: ${ARGUS_AI_MAX_CONCURRENT_RUNS:2}

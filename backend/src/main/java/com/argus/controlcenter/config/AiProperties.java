@@ -9,6 +9,12 @@ public class AiProperties {
     private String baseUrl;
     private String model;
     private String apiKey;
+    /** Optional OpenAI-compatible embeddings endpoint; blank keeps the deterministic local provider. */
+    private String embeddingBaseUrl;
+    /** Optional remote embedding model; both model and base URL must be set to enable the remote provider. */
+    private String embeddingModel;
+    private String embeddingApiKey;
+    private Duration embeddingTimeout = Duration.ofSeconds(10);
     private Duration timeout = Duration.ofSeconds(45);
     private int maxTokens = 800;
     private int maxConcurrentRuns = 2;
@@ -25,6 +31,16 @@ public class AiProperties {
     public void setModel(String value) { model = value; }
     public String getApiKey() { return apiKey; }
     public void setApiKey(String value) { apiKey = value; }
+    public String getEmbeddingBaseUrl() { return embeddingBaseUrl; }
+    public void setEmbeddingBaseUrl(String value) { embeddingBaseUrl = value; }
+    public String getEmbeddingModel() { return embeddingModel; }
+    public void setEmbeddingModel(String value) { embeddingModel = value; }
+    public String getEmbeddingApiKey() { return embeddingApiKey; }
+    public void setEmbeddingApiKey(String value) { embeddingApiKey = value; }
+    public Duration getEmbeddingTimeout() { return embeddingTimeout; }
+    public void setEmbeddingTimeout(Duration value) {
+        embeddingTimeout = value == null ? Duration.ofSeconds(10) : value;
+    }
     public Duration getTimeout() { return timeout; }
     public void setTimeout(Duration value) { timeout = value; }
     public int getMaxTokens() { return maxTokens; }
